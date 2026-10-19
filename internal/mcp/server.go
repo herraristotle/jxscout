@@ -58,7 +58,7 @@ func (s *Server) Run(ctx context.Context) error {
 			continue
 		}
 
-		result, err := s.handleRequest(ctx, &req)
+		result, err := s.HandleRequest(ctx, &req)
 		if err != nil {
 			s.sendError(req.ID, -32603, err.Error(), nil)
 			continue
@@ -70,7 +70,7 @@ func (s *Server) Run(ctx context.Context) error {
 	return s.scanner.Err()
 }
 
-func (s *Server) handleRequest(ctx context.Context, req *JSONRPCRequest) (interface{}, error) {
+func (s *Server) HandleRequest(ctx context.Context, req *JSONRPCRequest) (interface{}, error) {
 	switch req.Method {
 	case "initialize":
 		return s.handleInitialize(ctx, req.Params)

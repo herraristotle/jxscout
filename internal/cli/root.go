@@ -450,6 +450,7 @@ func init() {
 }
 
 func runFsIngest(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
 	path := args[0]
 
 	info, err := os.Stat(path)
@@ -494,15 +495,21 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Found %d files to ingest\n", len(files))
 
-	// TODO: Initialize JXScout in headless mode and ingest files
-	// For now, just copy files to project directory
+	dbPath := filepath.Join(common.GetPrivateDirectory(projectName), "db", "db.sql")
+	db, err := sqlx.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+	defer db.Close()
+
 	projectDir := common.GetWorkingDirectory(projectName)
-	ingestDir := filepath.Join(projectDir, "fs-ingested")
+	ingestDir := filepath.Join(projectDir, "original")
 
 	if err := os.MkdirAll(ingestDir, 0755); err != nil {
 		return fmt.Errorf("failed to create ingest directory: %w", err)
 	}
 
+	ingested := 0
 	for i, file := range files {
 		content, err := os.ReadFile(file)
 		if err != nil {
@@ -510,13 +517,21 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Generate destination path
 		relPath, _ := filepath.Rel(path, file)
 		if relPath == "" || strings.HasPrefix(relPath, "..") {
 			relPath = filepath.Base(file)
 		}
-		destPath := filepath.Join(ingestDir, relPath)
 
+		fakeURL := fmt.Sprintf("file://localhost/%s", strings.ReplaceAll(relPath, "\\", "/"))
+		contentHash := common.Hash(string(content))
+
+		var exists int
+		err = db.GetContext(ctx, &exists, "SELECT 1 FROM assets WHERE url = ? LIMIT 1", fakeURL)
+		if err == nil {
+			continue
+		}
+
+		destPath := filepath.Join(ingestDir, "localhost", relPath)
 		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to create directory for %s: %v\n", destPath, err)
 			continue
@@ -527,13 +542,42 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		if (i+1) % 100 == 0 {
-			fmt.Printf("Ingested %d/%d files...\n", i+1, len(files))
+		contentType := "JS"
+		if strings.HasSuffix(strings.ToLower(file), ".html") || strings.HasSuffix(strings.ToLower(file), ".htm") {
+			contentType = "HTML"
+		}
+
+		_, err = db.ExecContext(ctx, `
+			INSERT INTO assets (url, content_hash, content_type, fs_path, project, request_headers, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		`, fakeURL, contentHash, contentType, destPath, projectName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to insert asset %s: %v\n", fakeURL, err)
+			continue
+		}
+
+		var assetID int64
+		err = db.GetContext(ctx, &assetID, "SELECT id FROM assets WHERE url = ?", fakeURL)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to get asset ID for %s: %v\n", fakeURL, err)
+			continue
+		}
+
+		_, err = db.ExecContext(ctx, `
+			INSERT INTO events (name, payload) VALUES ('asset_service.asset_saved', ?)
+		`, fmt.Sprintf(`{"asset_id":%d}`, assetID))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to publish event for %s: %v\n", fakeURL, err)
+		}
+
+		ingested++
+		if (i+1)%100 == 0 {
+			fmt.Printf("Ingested %d/%d files...\n", ingested, len(files))
 		}
 	}
 
-	fmt.Printf("Successfully ingested %d files to %s\n", len(files), ingestDir)
-	fmt.Println("Note: Run jxscout proxy to analyze ingested files")
+	fmt.Printf("Successfully ingested %d files. Events published for background processing.\n", ingested)
+	fmt.Println("Run jxscout proxy (or wait for background workers if already running) to analyze.")
 
 	return nil
 }
