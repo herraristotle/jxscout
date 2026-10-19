@@ -178,11 +178,9 @@ function optimizeCode(source: string): { content: string; changes: number } {
 
   let optimized = source;
   for (const mut of mutations) {
-    // Note: loc positions are 1-indexed lines, 0-indexed columns
-    // For simplicity, we'll use a more robust approach with a rewriter
+    optimized = optimized.slice(0, mut.start) + mut.replacement + optimized.slice(mut.end);
   }
 
-  // For now, return with a note - full implementation would need proper source rewriting
   return { content: optimized, changes };
 }
 

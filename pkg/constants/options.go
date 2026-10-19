@@ -200,4 +200,18 @@ const (
 	DescriptionCaidoHostname                = "hostname where Caido is running"
 	DescriptionCaidoPort                    = "port where Caido is running"
 	DescriptionOverrideContentCheckInterval = "interval at which to check for changes in override content and update match/replace rules"
+
+	// Proxy rotation
+	DescriptionProxyListFile         = "file containing list of proxy URLs (one per line)"
+	DescriptionProxyRotationStrategy = "proxy rotation strategy: round-robin, random, least-used"
+	DescriptionProxyMaxFailures      = "remove proxy after this many consecutive failures"
+
+	// Per-host rate limiting
+	DescriptionRateLimitConfigFile = "JSON file with per-host rate limits (e.g. {\"limits\": {\"example.com\": \"10/s\"}})"
+
+	// Screenshots
+	DescriptionEnableScreenshots     = "enable screenshot capture for HTML assets"
+	DescriptionScreenshotConcurrency = "number of concurrent screenshot capture workers"
+	DescriptionScreenshotTimeout     = "timeout for screenshot capture"
+	DescriptionScreenshotViewport    = "screenshot viewport size (e.g. 1920x1080)"
 )

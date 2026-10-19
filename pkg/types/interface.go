@@ -79,6 +79,20 @@ type Options struct {
 	DiscoverGoogleLazyChunks         bool                `yaml:"discover-google-lazy-chunks"`
 	CustomAnalyzersPath              string              `yaml:"custom-analyzers-path"`
 	SkipScriptPath                   string              `yaml:"skip-script-path"`
+
+	// Proxy rotation
+	ProxyListFile         string `yaml:"proxy-list-file"`
+	ProxyRotationStrategy string `yaml:"proxy-rotation-strategy"`
+	ProxyMaxFailures      int    `yaml:"proxy-max-failures"`
+
+	// Per-host rate limiting
+	RateLimitConfigFile string `yaml:"rate-limit-config-file"`
+
+	// Screenshots
+	EnableScreenshots     bool          `yaml:"enable-screenshots"`
+	ScreenshotConcurrency int           `yaml:"screenshot-concurrency"`
+	ScreenshotTimeout     time.Duration `yaml:"screenshot-timeout"`
+	ScreenshotViewport    string        `yaml:"screenshot-viewport"`
 }
 
 // AssetService interface

@@ -24,13 +24,17 @@ import (
 	"github.com/francisconeves97/jxscout/internal/modules/beautifier"
 	"github.com/francisconeves97/jxscout/internal/modules/bookmarks"
 	chunkdiscoverer "github.com/francisconeves97/jxscout/internal/modules/chunk-discoverer"
+	"github.com/francisconeves97/jxscout/internal/modules/comparer"
 	customanalyzers "github.com/francisconeves97/jxscout/internal/modules/custom-analyzers"
+	"github.com/francisconeves97/jxscout/internal/modules/differ"
 	gitcommiter "github.com/francisconeves97/jxscout/internal/modules/git-committer"
 	htmlingestion "github.com/francisconeves97/jxscout/internal/modules/html-ingestion"
 	"github.com/francisconeves97/jxscout/internal/modules/ingestion"
 	jsingestion "github.com/francisconeves97/jxscout/internal/modules/js-ingestion"
 	"github.com/francisconeves97/jxscout/internal/modules/optimizer"
 	"github.com/francisconeves97/jxscout/internal/modules/overrides"
+	"github.com/francisconeves97/jxscout/internal/modules/reporter"
+	"github.com/francisconeves97/jxscout/internal/modules/screenshot"
 	"github.com/francisconeves97/jxscout/internal/modules/sourcemaps"
 	"github.com/francisconeves97/jxscout/internal/modules/unpacker"
 	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
@@ -221,6 +225,15 @@ func (s *jxscout) registerCoreModules() {
 		unpacker.NewUnpackerModule(s.options.UnpackerConcurrency),
 		customanalyzers.NewCustomAnalyzerModule(),
 		bookmarks.NewBookmarkModule(),
+		screenshot.NewScreenshotModule(
+			s.options.ScreenshotConcurrency,
+			s.options.ScreenshotTimeout,
+			s.options.ScreenshotViewport,
+			s.options.EnableScreenshots,
+		),
+		reporter.NewReporterModule(),
+		differ.NewDifferModule(),
+		comparer.NewComparerModule(),
 	}
 
 	for _, module := range coreModules {
@@ -266,6 +279,8 @@ func (s *jxscout) start() error {
 	if err != nil {
 		return errutil.Wrap(err, "failed to initialize modules")
 	}
+
+	s.startMemoryMonitoring()
 
 	s.log.Info("starting server", "port", s.options.Port)
 

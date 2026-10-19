@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -590,4 +593,153 @@ func hasExtension(path string, exts []string) bool {
 		}
 	}
 	return false
+}
+
+// Backup command
+var backupCmd = &cobra.Command{
+	Use:   "backup [output-file]",
+	Short: "Backup project to archive",
+	Long:  "Create compressed archive of project database and assets (supports >4GB projects)",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runBackup,
+}
+
+func init() {
+	rootCmd.AddCommand(backupCmd)
+}
+
+func runBackup(cmd *cobra.Command, args []string) error {
+	outputFile := args[0]
+
+	projectDir := common.GetPrivateDirectory(projectName)
+	workingDir := common.GetWorkingDirectory(projectName)
+
+	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
+		return fmt.Errorf("project %s does not exist", projectName)
+	}
+
+	fmt.Printf("Starting backup of project '%s'...\n", projectName)
+	fmt.Printf("Source: %s\n", projectDir)
+	fmt.Printf("Assets: %s\n", workingDir)
+	fmt.Printf("Output: %s\n", outputFile)
+
+	// Use tar + gzip streaming for memory efficiency with large projects
+	outFile, err := os.Create(outputFile)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer outFile.Close()
+
+	gzipWriter := gzip.NewWriter(outFile)
+	defer gzipWriter.Close()
+
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer tarWriter.Close()
+
+	totalSize := int64(0)
+	fileCount := 0
+
+	// Backup project metadata and database
+	err = filepath.Walk(projectDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(projectDir, path)
+		if err != nil {
+			return err
+		}
+
+		header, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.Join("project", relPath)
+
+		if err := tarWriter.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			written, err := io.Copy(tarWriter, file)
+			if err != nil {
+				return err
+			}
+			totalSize += written
+			fileCount++
+
+			if fileCount%1000 == 0 {
+				fmt.Printf("Backed up %d files (%.2f MB)...\n", fileCount, float64(totalSize)/(1024*1024))
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to backup project directory: %w", err)
+	}
+
+	// Backup assets (original, beautified, etc.)
+	if _, err := os.Stat(workingDir); err == nil {
+		err = filepath.Walk(workingDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			relPath, err := filepath.Rel(workingDir, path)
+			if err != nil {
+				return err
+			}
+
+			header, err := tar.FileInfoHeader(info, "")
+			if err != nil {
+				return err
+			}
+			header.Name = filepath.Join("assets", relPath)
+
+			if err := tarWriter.WriteHeader(header); err != nil {
+				return err
+			}
+
+			if !info.IsDir() {
+				file, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+
+				written, err := io.Copy(tarWriter, file)
+				if err != nil {
+					return err
+				}
+				totalSize += written
+				fileCount++
+
+				if fileCount%1000 == 0 {
+					fmt.Printf("Backed up %d files (%.2f MB)...\n", fileCount, float64(totalSize)/(1024*1024))
+				}
+			}
+
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("failed to backup assets directory: %w", err)
+		}
+	}
+
+	fmt.Printf("\nBackup complete!\n")
+	fmt.Printf("Files: %d\n", fileCount)
+	fmt.Printf("Uncompressed size: %.2f MB\n", float64(totalSize)/(1024*1024))
+
+	outFileInfo, _ := os.Stat(outputFile)
+	fmt.Printf("Archive size: %.2f MB\n", float64(outFileInfo.Size())/(1024*1024))
+	fmt.Printf("Compression ratio: %.1f%%\n", (1.0-float64(outFileInfo.Size())/float64(totalSize))*100)
+
+	return nil
 }

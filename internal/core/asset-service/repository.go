@@ -45,6 +45,7 @@ type DBAsset struct {
 	OptimizedFrom     *int64    `db:"optimized_from"`
 	IsUnpacked        bool      `db:"is_unpacked"`
 	UnpackedFrom      *int64    `db:"unpacked_from"`
+	ScreenshotPath    *string   `db:"screenshot_path"`
 	Parent            *DBAsset
 
 	Children []DBAsset
@@ -127,6 +128,10 @@ func initializeRepo(db *sqlx.DB) error {
 	}
 
 	if err := migrateAddUnpackedFrom(db); err != nil {
+		return errutil.Wrap(err, "failed to run migrations")
+	}
+
+	if err := migrateAddScreenshotPath(db); err != nil {
 		return errutil.Wrap(err, "failed to run migrations")
 	}
 
@@ -675,6 +680,29 @@ func UpdateAssetIsBeautified(ctx context.Context, db queryer, assetID int64, isB
 	_, err := db.ExecContext(ctx, query, isBeautified, assetID)
 	if err != nil {
 		return errutil.Wrap(err, "failed to update asset is beautified")
+	}
+
+	return nil
+}
+
+func migrateAddScreenshotPath(db *sqlx.DB) error {
+	var count int
+	err := db.Get(&count, `
+		SELECT COUNT(*) FROM pragma_table_info('assets')
+		WHERE name = 'screenshot_path'
+	`)
+	if err != nil {
+		return errutil.Wrap(err, "failed to check if column exists")
+	}
+
+	if count == 0 {
+		_, err := db.Exec(`
+			ALTER TABLE assets
+			ADD COLUMN screenshot_path TEXT
+		`)
+		if err != nil {
+			return errutil.Wrap(err, "failed to add screenshot_path column")
+		}
 	}
 
 	return nil
