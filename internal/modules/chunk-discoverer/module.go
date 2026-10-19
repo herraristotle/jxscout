@@ -184,6 +184,17 @@ func (s *chunkDiscovererModule) discoverPossibleChunks(ctx context.Context, asse
 			defer wg.Done()
 			defer func() { <-sem }() // Release semaphore
 
+			// Check if asset already exists in database to avoid duplicate fetches
+			_, exists, err := s.sdk.AssetService.GetAssetByURL(ctx, chunkURL)
+			if err != nil {
+				s.sdk.Logger.Error("failed to check if asset exists", "err", err, "url", chunkURL)
+				return
+			}
+			if exists {
+				s.sdk.Logger.Debug("chunk already exists, skipping fetch", "url", chunkURL)
+				return
+			}
+
 			content, found, err := s.sdk.AssetFetcher.RateLimitedGet(ctx, chunkURL, asset.RequestHeaders)
 			if err != nil {
 				s.sdk.Logger.Error("failed to perform get request", "err", err)
@@ -221,7 +232,11 @@ func (s *chunkDiscovererModule) discoverPossibleChunks(ctx context.Context, asse
 
 func (s *chunkDiscovererModule) execChunkDiscoverer(ctx context.Context, asset assetservice.Asset) ([]string, error) {
 	// Prepare the command to run the JavaScript script with Bun
-	cmd := exec.CommandContext(ctx, "bun", "run", s.chunkDiscovererBinaryPath, asset.Path, fmt.Sprintf("%d", s.sdk.Options.ChunkDiscovererBruteForceLimit))
+	googleLazyChunks := "false"
+	if s.sdk.Options.DiscoverGoogleLazyChunks {
+		googleLazyChunks = "true"
+	}
+	cmd := exec.CommandContext(ctx, "bun", "run", s.chunkDiscovererBinaryPath, asset.Path, fmt.Sprintf("%d", s.sdk.Options.ChunkDiscovererBruteForceLimit), googleLazyChunks)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

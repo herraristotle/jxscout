@@ -51,6 +51,14 @@ type Asset struct {
 	ChunkFromAssetID *int64 `json:"chunk_from_asset_id"`
 	// IsBeautified is true if the asset has been beautified
 	IsBeautified bool `json:"is_beautified"`
+	// IsOptimized is true if the asset has been optimized
+	IsOptimized bool `json:"is_optimized"`
+	// OptimizedFrom is the id of the asset this was optimized from
+	OptimizedFrom *int64 `json:"optimized_from"`
+	// IsUnpacked is true if the asset was unpacked from a packed file
+	IsUnpacked bool `json:"is_unpacked"`
+	// UnpackedFrom is the id of the asset this was unpacked from
+	UnpackedFrom *int64 `json:"unpacked_from"`
 	// Parent is the asset that loaded the current asset, nil if it doesn't exist. (e.g. html page loading a js script)
 	Parent *Asset `json:"parent"`
 
@@ -295,12 +303,23 @@ func (s *assetService) UpdateWorkingDirectory(path string) {
 }
 
 func (s *assetService) mapRepoAssetToAsset(repoAsset DBAsset) Asset {
+	var requestHeaders map[string]string
+	if repoAsset.RequestHeaders != "" {
+		if err := json.Unmarshal([]byte(repoAsset.RequestHeaders), &requestHeaders); err != nil {
+			s.log.Error("failed to unmarshal request headers", "error", err)
+			requestHeaders = make(map[string]string)
+		}
+	} else {
+		requestHeaders = make(map[string]string)
+	}
+
 	asset := Asset{
-		ID:          repoAsset.ID,
-		URL:         repoAsset.URL,
-		ContentType: repoAsset.ContentType,
-		Project:     repoAsset.Project,
-		Path:        repoAsset.FileSystemPath,
+		ID:             repoAsset.ID,
+		URL:            repoAsset.URL,
+		ContentType:    repoAsset.ContentType,
+		Project:        repoAsset.Project,
+		Path:           repoAsset.FileSystemPath,
+		RequestHeaders: requestHeaders,
 	}
 
 	children := []Asset{}

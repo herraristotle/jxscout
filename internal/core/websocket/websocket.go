@@ -35,6 +35,8 @@ func NewWebsocketServer(r chi.Router, logger *slog.Logger) *WebsocketServer {
 			CheckOrigin: func(r *http.Request) bool {
 				return true
 			},
+			// Allow all subprotocols for better compatibility
+			Subprotocols: []string{},
 		},
 		clients:  make(map[*websocket.Conn]bool),
 		log:      logger,

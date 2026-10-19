@@ -1,16 +1,8 @@
-> ⚠️ This version of JXScout is no longer actively maintained.
->
-> JXScout has evolved a lot since this open source version was first released. The project has been completely rewritten from scratch in Rust as JXScout Pro, which is a separate, closed source codebase. JXScout Pro is a completely different product — it doesn't share any code with this version and is far more capable.
->
-> You're welcome to experiment with this version, but be aware it has known bugs that will impact your coverage. For the full experience, check out JXScout Pro.
->
-> I am always happy to offer free trials for the Pro version! You can get it through https://jxscout.app/
->
-> Please join the discord server to follow updates or for any questions: https://discord.com/invite/qu9AMdjZFj
-
 # jxscout
 
-**jxscout** is a tool designed to help security researchers analyze and find vulnerabilities in JavaScript code. It works with your favorite proxy (Burp or Caido), capturing requests and saving optimized versions locally for easy analysis in your preferred code editor.
+**jxscout** is a modern, actively maintained open-source tool designed to help security researchers analyze and find vulnerabilities in JavaScript code. It works with your favorite proxy (Burp or Caido), capturing requests and saving optimized versions locally for easy analysis in your preferred code editor.
+
+This is the **Modern OSS Edition** — a clean-room upgrade of the original open-source codebase with enhanced capabilities, bug fixes, and new features developed under GPL-3.0.
 
 ## Key Features
 

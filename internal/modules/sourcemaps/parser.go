@@ -146,7 +146,7 @@ func getSourceMapForAsset(ctx context.Context, asset assetservice.Asset, sdk *jx
 			return sm, true, nil
 		}
 
-		res, ok, err := sdk.AssetFetcher.RateLimitedGet(ctx, sourceMapParsedURL.String(), nil)
+		res, ok, err := sdk.AssetFetcher.RateLimitedGet(ctx, sourceMapParsedURL.String(), asset.RequestHeaders)
 		if err != nil {
 			return sourceMap{}, false, dbeventbus.NewRetriableError(errutil.Wrap(err, "failed to fetch source map"))
 		}

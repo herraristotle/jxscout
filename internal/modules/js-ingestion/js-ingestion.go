@@ -2,6 +2,7 @@ package jsingestion
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -115,11 +116,11 @@ func (m *jsIngestionModule) validateIngestionRequest(req *ingestion.IngestionReq
 
 	if m.downloadReferedJS {
 		if !m.sdk.Scope.IsInScope(req.Request.URL) && !m.sdk.Scope.IsInScope(m.getReferer(req)) {
-			return errors.New("request is not in scope")
+			return fmt.Errorf("request is not in scope (url=%s, referer=%s)", req.Request.URL, m.getReferer(req))
 		}
 	} else {
 		if !m.sdk.Scope.IsInScope(req.Request.URL) {
-			return errors.New("request is not in scope")
+			return fmt.Errorf("request is not in scope (url=%s)", req.Request.URL)
 		}
 	}
 

@@ -26,6 +26,7 @@ import { windowNameAnalyzerBuilder } from "./tree-analyzers/window-name";
 import { windowOpenAnalyzerBuilder } from "./tree-analyzers/window-open";
 import { dangerousHtmlAnalyzerBuilder } from "./tree-analyzers/react-dangerously-set-inner-html";
 import { httpMethodsAnalyzerBuilder } from "./tree-analyzers/http-methods";
+import { dependencyConfusionAnalyzerBuilder } from "./tree-analyzers/dependency-confusion";
 
 export function parseFile(filePath: string): AnalyzerParams {
   const fileContent = fs.readFileSync(filePath, "utf-8");
@@ -99,7 +100,8 @@ export type AnalyzerType =
   | "window-name"
   | "window-open"
   | "dangerous-html"
-  | "http-methods";
+  | "http-methods"
+  | "dependency-confusion";
 
 export function analyzeFile(
   filePath: string,
@@ -195,6 +197,10 @@ export function analyzeFile(
     "http-methods",
     httpMethodsAnalyzerBuilder
   );
+  const dependencyConfusionAnalyzer = createAnalyzer(
+    "dependency-confusion",
+    dependencyConfusionAnalyzerBuilder
+  );
 
   traverse(args.source, args.ast, {
     Literal(node, ancestors) {
@@ -231,6 +237,7 @@ export function analyzeFile(
       windowOpenAnalyzer?.CallExpression?.(node, ancestors);
       robustPathsAnalyzer?.CallExpression?.(node, ancestors);
       httpMethodsAnalyzer?.CallExpression?.(node, ancestors);
+      dependencyConfusionAnalyzer?.CallExpression?.(node, ancestors);
     },
     AssignmentExpression(node, ancestors) {
       postMessageAnalyzer?.AssignmentExpression?.(node, ancestors);
@@ -274,6 +281,9 @@ export function analyzeFile(
     },
     BinaryExpression(node, ancestors) {
       robustPathsAnalyzer?.BinaryExpression?.(node, ancestors);
+    },
+    ImportDeclaration(node, ancestors) {
+      dependencyConfusionAnalyzer?.ImportDeclaration?.(node, ancestors);
     },
   });
 

@@ -118,7 +118,7 @@ func (m *htmlIngestionModule) getContentType(req ingestion.IngestionRequest) str
 
 func (m *htmlIngestionModule) validateIngestionRequest(req *ingestion.IngestionRequest) error {
 	if !m.sdk.Scope.IsInScope(req.Request.URL) {
-		return errors.New("request is not in scope")
+		return fmt.Errorf("request is not in scope (url=%s)", req.Request.URL)
 	}
 
 	if req.Response.Status != http.StatusOK {

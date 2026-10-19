@@ -50,6 +50,8 @@ type Options struct {
 	BeautifierConcurrency            int                 `yaml:"beautifier-concurrency"`
 	ChunkDiscovererConcurrency       int                 `yaml:"chunk-discoverer-concurrency"`
 	ASTAnalyzerConcurrency           int                 `yaml:"ast-analyzer-concurrency"`
+	OptimizerConcurrency             int                 `yaml:"optimizer-concurrency"`
+	UnpackerConcurrency              int                 `yaml:"unpacker-concurrency"`
 	ChunkDiscovererBruteForceLimit   int                 `yaml:"chunk-discoverer-bruteforce-limit"`
 	JavascriptRequestsCacheTTL       time.Duration       `yaml:"js-requests-cache-ttl"`
 	HTMLRequestsCacheTTL             time.Duration       `yaml:"html-requests-cache-ttl"`
@@ -61,6 +63,22 @@ type Options struct {
 	CaidoHostname                    string              `yaml:"caido-hostname"`
 	CaidoPort                        int                 `yaml:"caido-port"`
 	OverrideContentCheckInterval     time.Duration       `yaml:"override-content-check-interval"`
+	EnableOptimizer                  bool                `yaml:"enable-optimizer"`
+	EnableUnpacker                   bool                `yaml:"enable-unpacker"`
+	MemoryLimitMB                    int                 `yaml:"memory-limit-mb"`
+	MemoryUsageCheckInterval         time.Duration       `yaml:"memory-usage-check-interval"`
+	BeautifierMemoryUsageLimitMB     int                 `yaml:"beautifier-memory-usage-limit-mb"`
+	ChunkDiscovererMemoryUsageLimitMB int                `yaml:"chunk-discoverer-memory-usage-limit-mb"`
+	ASTAnalyzerMemoryUsageLimitMB    int                 `yaml:"ast-analyzer-memory-usage-limit-mb"`
+	SourceMapDiscovererMemoryUsageLimitMB int            `yaml:"source-map-discoverer-memory-usage-limit-mb"`
+	OptimizerMemoryUsageLimitMB      int                 `yaml:"optimizer-memory-usage-limit-mb"`
+	UnpackerMemoryUsageLimitMB       int                 `yaml:"unpacker-memory-usage-limit-mb"`
+	FilesystemIngestionFilesPerSecond int                `yaml:"filesystem-ingestion-files-per-second"`
+	MCPServerHostname                string              `yaml:"mcp-server-hostname"`
+	MCPServerPort                    int                 `yaml:"mcp-server-port"`
+	DiscoverGoogleLazyChunks         bool                `yaml:"discover-google-lazy-chunks"`
+	CustomAnalyzersPath              string              `yaml:"custom-analyzers-path"`
+	SkipScriptPath                   string              `yaml:"skip-script-path"`
 }
 
 // AssetService interface

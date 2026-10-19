@@ -79,7 +79,7 @@ func (t *TUI) writeLineToOutput(line string) {
 	outputBuilder := strings.Builder{}
 
 	outputBuilder.WriteString(t.output)
-	outputBuilder.WriteString(fmt.Sprintf("%s\n", line))
+	fmt.Fprintf(&outputBuilder, "%s\n", line)
 
 	t.output = outputBuilder.String()
 }
@@ -323,13 +323,13 @@ func (t *TUI) View() string {
 	if t.output == "" {
 		s.WriteString(staticBanner)
 
-		disclaimer := "This version of JXScout is no longer actively maintained.\n\nJXScout has evolved a lot since this open source version was first released. The project has been completely rewritten from scratch in Rust as JXScout Pro, which is a separate, closed source codebase. JXScout Pro is a completely different product — it doesn't share any code with this version and is far more capable.\n\nYou're welcome to experiment with this version, but be aware it has known bugs that will impact your coverage. For the full experience, check out JXScout Pro.\n\nI am always happy to offer free trials for the Pro version! You can get it through https://jxscout.app/"
+		banner := "JXScout Modern OSS Edition — Active Security Research Workbench\nProxy listener active. Type 'help' for commands or 'guide' for usage."
 		if t.width > 0 {
-			disclaimer = wordwrap.String(disclaimer, t.width)
+			banner = wordwrap.String(banner, t.width)
 		}
 		s.WriteString(lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205")).
-			Render("\n" + disclaimer + "\n"))
+			Foreground(lipgloss.Color("86")).
+			Render("\n" + banner + "\n"))
 
 		if t.hasUpdate {
 			updateMsg := fmt.Sprintf("\n🔄 A new version (%s) is available!\nVisit https://github.com/francisconeves97/jxscout to check it out.\n", t.latestVersion)

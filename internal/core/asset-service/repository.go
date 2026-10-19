@@ -41,6 +41,10 @@ type DBAsset struct {
 	IsChunkDiscovered *bool     `db:"is_chunk_discovered"`
 	ChunkFromAssetID  *int64    `db:"chunk_from_asset_id"`
 	IsBeautified      bool      `db:"is_beautified"`
+	IsOptimized       bool      `db:"is_optimized"`
+	OptimizedFrom     *int64    `db:"optimized_from"`
+	IsUnpacked        bool      `db:"is_unpacked"`
+	UnpackedFrom      *int64    `db:"unpacked_from"`
 	Parent            *DBAsset
 
 	Children []DBAsset
@@ -56,7 +60,7 @@ func initializeRepo(db *sqlx.DB) error {
 	_, err := db.Exec(
 		`
 		CREATE TABLE IF NOT EXISTS assets (
-			id INTEGER PRIMARY KEY AUTOINCREMENT, 
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			url TEXT NOT NULL UNIQUE,
 			content_hash TEXT NOT NULL,
 			content_type TEXT NOT NULL,
@@ -64,7 +68,15 @@ func initializeRepo(db *sqlx.DB) error {
 			project TEXT NOT NULL,
 			request_headers TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			is_inline_js BOOLEAN DEFAULT FALSE,
+			is_chunk_discovered BOOLEAN DEFAULT FALSE,
+			chunk_from_asset_id INTEGER,
+			is_beautified BOOLEAN DEFAULT FALSE,
+			is_optimized BOOLEAN DEFAULT FALSE,
+			optimized_from INTEGER,
+			is_unpacked BOOLEAN DEFAULT FALSE,
+			unpacked_from INTEGER
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_assets_project ON assets(project);
@@ -99,6 +111,22 @@ func initializeRepo(db *sqlx.DB) error {
 	}
 
 	if err := migrateAddChunkFromAssetID(db); err != nil {
+		return errutil.Wrap(err, "failed to run migrations")
+	}
+
+	if err := migrateAddIsOptimized(db); err != nil {
+		return errutil.Wrap(err, "failed to run migrations")
+	}
+
+	if err := migrateAddOptimizedFrom(db); err != nil {
+		return errutil.Wrap(err, "failed to run migrations")
+	}
+
+	if err := migrateAddIsUnpacked(db); err != nil {
+		return errutil.Wrap(err, "failed to run migrations")
+	}
+
+	if err := migrateAddUnpackedFrom(db); err != nil {
 		return errutil.Wrap(err, "failed to run migrations")
 	}
 
@@ -187,7 +215,7 @@ func migrateAddChunkFromAssetID(db *sqlx.DB) error {
 	// Check if column exists
 	var count int
 	err := db.Get(&count, `
-		SELECT COUNT(*) FROM pragma_table_info('assets') 
+		SELECT COUNT(*) FROM pragma_table_info('assets')
 		WHERE name = 'chunk_from_asset_id'
 	`)
 	if err != nil {
@@ -197,7 +225,7 @@ func migrateAddChunkFromAssetID(db *sqlx.DB) error {
 	// If column doesn't exist, add it
 	if count == 0 {
 		_, err := db.Exec(`
-			ALTER TABLE assets 
+			ALTER TABLE assets
 			ADD COLUMN chunk_from_asset_id INTEGER
 		`)
 		if err != nil {
@@ -208,15 +236,107 @@ func migrateAddChunkFromAssetID(db *sqlx.DB) error {
 	return nil
 }
 
+func migrateAddIsOptimized(db *sqlx.DB) error {
+	var count int
+	err := db.Get(&count, `
+		SELECT COUNT(*) FROM pragma_table_info('assets')
+		WHERE name = 'is_optimized'
+	`)
+	if err != nil {
+		return errutil.Wrap(err, "failed to check if column exists")
+	}
+
+	if count == 0 {
+		_, err := db.Exec(`
+			ALTER TABLE assets
+			ADD COLUMN is_optimized BOOLEAN DEFAULT FALSE
+		`)
+		if err != nil {
+			return errutil.Wrap(err, "failed to add is_optimized column")
+		}
+	}
+
+	return nil
+}
+
+func migrateAddIsUnpacked(db *sqlx.DB) error {
+	var count int
+	err := db.Get(&count, `
+		SELECT COUNT(*) FROM pragma_table_info('assets')
+		WHERE name = 'is_unpacked'
+	`)
+	if err != nil {
+		return errutil.Wrap(err, "failed to check if column exists")
+	}
+
+	if count == 0 {
+		_, err := db.Exec(`
+			ALTER TABLE assets
+			ADD COLUMN is_unpacked BOOLEAN DEFAULT FALSE
+		`)
+		if err != nil {
+			return errutil.Wrap(err, "failed to add is_unpacked column")
+		}
+	}
+
+	return nil
+}
+
+func migrateAddOptimizedFrom(db *sqlx.DB) error {
+	var count int
+	err := db.Get(&count, `
+		SELECT COUNT(*) FROM pragma_table_info('assets')
+		WHERE name = 'optimized_from'
+	`)
+	if err != nil {
+		return errutil.Wrap(err, "failed to check if column exists")
+	}
+
+	if count == 0 {
+		_, err := db.Exec(`
+			ALTER TABLE assets
+			ADD COLUMN optimized_from INTEGER
+		`)
+		if err != nil {
+			return errutil.Wrap(err, "failed to add optimized_from column")
+		}
+	}
+
+	return nil
+}
+
+func migrateAddUnpackedFrom(db *sqlx.DB) error {
+	var count int
+	err := db.Get(&count, `
+		SELECT COUNT(*) FROM pragma_table_info('assets')
+		WHERE name = 'unpacked_from'
+	`)
+	if err != nil {
+		return errutil.Wrap(err, "failed to check if column exists")
+	}
+
+	if count == 0 {
+		_, err := db.Exec(`
+			ALTER TABLE assets
+			ADD COLUMN unpacked_from INTEGER
+		`)
+		if err != nil {
+			return errutil.Wrap(err, "failed to add unpacked_from column")
+		}
+	}
+
+	return nil
+}
+
 func SaveAsset(ctx context.Context, db queryer, asset DBAsset) (int64, error) {
 	var assetID int64
 	err := sqlx.GetContext(ctx, db, &assetID, `
-	INSERT INTO assets (url, content_hash, content_type, fs_path, project, request_headers, is_inline_js, is_chunk_discovered, chunk_from_asset_id, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-	ON CONFLICT(url) DO UPDATE SET content_hash = ?, content_type = ?, fs_path = ?, project = ?, request_headers = ?, is_inline_js = ?, is_chunk_discovered = ?, chunk_from_asset_id = ?, updated_at = CURRENT_TIMESTAMP
+	INSERT INTO assets (url, content_hash, content_type, fs_path, project, request_headers, is_inline_js, is_chunk_discovered, chunk_from_asset_id, is_beautified, is_optimized, optimized_from, is_unpacked, unpacked_from, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	ON CONFLICT(url) DO UPDATE SET content_hash = ?, content_type = ?, fs_path = ?, project = ?, request_headers = ?, is_inline_js = ?, is_chunk_discovered = ?, chunk_from_asset_id = ?, is_beautified = ?, is_optimized = ?, optimized_from = ?, is_unpacked = ?, unpacked_from = ?, updated_at = CURRENT_TIMESTAMP
 	RETURNING id
 	`, asset.URL, asset.ContentHash, asset.ContentType, asset.FileSystemPath, asset.Project, asset.RequestHeaders, asset.IsInlineJS, asset.IsChunkDiscovered,
-		asset.ChunkFromAssetID, asset.ContentHash, asset.ContentType, asset.FileSystemPath, asset.Project, asset.RequestHeaders, asset.IsInlineJS, asset.IsChunkDiscovered, asset.ChunkFromAssetID)
+		asset.ChunkFromAssetID, asset.IsBeautified, asset.IsOptimized, asset.OptimizedFrom, asset.IsUnpacked, asset.UnpackedFrom, asset.ContentHash, asset.ContentType, asset.FileSystemPath, asset.Project, asset.RequestHeaders, asset.IsInlineJS, asset.IsChunkDiscovered, asset.ChunkFromAssetID, asset.IsBeautified, asset.IsOptimized, asset.OptimizedFrom, asset.IsUnpacked, asset.UnpackedFrom)
 	if err != nil {
 		return 0, errutil.Wrap(err, "failed to insert the asset")
 	}

@@ -22,13 +22,17 @@ import (
 	"github.com/francisconeves97/jxscout/internal/core/websocket"
 	astanalyzer "github.com/francisconeves97/jxscout/internal/modules/ast-analyzer"
 	"github.com/francisconeves97/jxscout/internal/modules/beautifier"
+	"github.com/francisconeves97/jxscout/internal/modules/bookmarks"
 	chunkdiscoverer "github.com/francisconeves97/jxscout/internal/modules/chunk-discoverer"
+	customanalyzers "github.com/francisconeves97/jxscout/internal/modules/custom-analyzers"
 	gitcommiter "github.com/francisconeves97/jxscout/internal/modules/git-committer"
 	htmlingestion "github.com/francisconeves97/jxscout/internal/modules/html-ingestion"
 	"github.com/francisconeves97/jxscout/internal/modules/ingestion"
 	jsingestion "github.com/francisconeves97/jxscout/internal/modules/js-ingestion"
+	"github.com/francisconeves97/jxscout/internal/modules/optimizer"
 	"github.com/francisconeves97/jxscout/internal/modules/overrides"
 	"github.com/francisconeves97/jxscout/internal/modules/sourcemaps"
+	"github.com/francisconeves97/jxscout/internal/modules/unpacker"
 	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
 	"github.com/jmoiron/sqlx"
 
@@ -213,6 +217,10 @@ func (s *jxscout) registerCoreModules() {
 		sourcemaps.NewSourceMaps(s.options.AssetSaveConcurrency),
 		overridesModule,
 		astanalyzer.NewAstAnalyzerModule(s.options.ASTAnalyzerConcurrency),
+		optimizer.NewOptimizerModule(s.options.OptimizerConcurrency),
+		unpacker.NewUnpackerModule(s.options.UnpackerConcurrency),
+		customanalyzers.NewCustomAnalyzerModule(),
+		bookmarks.NewBookmarkModule(),
 	}
 
 	for _, module := range coreModules {

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "jxscout": {
+      "command": "/path/to/jxscout-mcp",
+      "args": [],
+      "description": "JXScout security analysis tools - query assets, descriptors, generate wordlists"
+    }
+  }
+}

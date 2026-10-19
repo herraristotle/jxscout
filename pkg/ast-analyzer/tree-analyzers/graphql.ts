@@ -9,6 +9,19 @@ import { Visitor } from "../walker";
 const GRAPHQL_REGEX =
   /(query|mutation|type|fragment|subscription|directive|input|enum|interface|union|scalar|object|list|nonnull)/;
 
+// Decode JavaScript string escapes
+function decodeStringEscapes(str: string): string {
+  return str
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
 // Checks if a string is a valid GraphQL operation
 function isValidGraphQLOperation(str: string): boolean {
   // Basic validation of GraphQL structure
@@ -67,15 +80,18 @@ const graphqlAnalyzerBuilder = (
         return;
       }
 
-      if (!isValidGraphQLOperation(node.value)) {
+      // Decode string escapes before validation
+      const decodedValue = decodeStringEscapes(node.value);
+
+      if (!isValidGraphQLOperation(decodedValue)) {
         return;
       }
 
-      if (GRAPHQL_REGEX.test(node.value)) {
+      if (GRAPHQL_REGEX.test(decodedValue)) {
         const match: AnalyzerMatch = {
           filePath: args.filePath,
           analyzerName: GRAPHQL_ANALYZER_NAME,
-          value: node.value,
+          value: node.value, // Keep original value for reference
           start: node.loc.start,
           end: node.loc.end,
           tags: {
@@ -84,12 +100,12 @@ const graphqlAnalyzerBuilder = (
         };
 
         let typeFound = false;
-        if (node.value.includes("query")) {
+        if (decodedValue.includes("query")) {
           match.tags["graphql-query"] = true;
           typeFound = true;
         }
 
-        if (node.value.includes("mutation")) {
+        if (decodedValue.includes("mutation")) {
           match.tags["graphql-mutation"] = true;
           typeFound = true;
         }
@@ -110,15 +126,18 @@ const graphqlAnalyzerBuilder = (
         .slice(node.start, node.end)
         .replaceAll("`", "");
 
-      if (!isValidGraphQLOperation(rawValue)) {
+      // Decode string escapes
+      const decodedValue = decodeStringEscapes(rawValue);
+
+      if (!isValidGraphQLOperation(decodedValue)) {
         return;
       }
 
-      if (GRAPHQL_REGEX.test(rawValue)) {
+      if (GRAPHQL_REGEX.test(decodedValue)) {
         const match: AnalyzerMatch = {
           filePath: args.filePath,
           analyzerName: GRAPHQL_ANALYZER_NAME,
-          value: rawValue,
+          value: rawValue, // Keep original value
           start: node.loc.start,
           end: node.loc.end,
           tags: {
@@ -126,11 +145,11 @@ const graphqlAnalyzerBuilder = (
           },
         };
 
-        if (rawValue.includes("query")) {
+        if (decodedValue.includes("query")) {
           match.tags["graphql-query"] = true;
         }
 
-        if (rawValue.includes("mutation")) {
+        if (decodedValue.includes("mutation")) {
           match.tags["graphql-mutation"] = true;
         }
 

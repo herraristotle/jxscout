@@ -4,13 +4,17 @@ import { is, traverse } from "estree-toolkit";
 import Sval from "sval";
 import {
   getViteChunks,
+  getNextJsChunks,
+  getTurbopackChunks,
+  getGoogleLazyChunks,
   identifyChunkLoadingFunctionAndExpression,
 } from "./fingerprinting";
 import { getChunkFunctionCode } from "./transformer";
 
 export const discoverChunks = (
   code: string,
-  bruteforceLimit: number
+  bruteforceLimit: number,
+  discoverGoogleLazyChunks?: boolean
 ): string[] => {
   let sourceType: "module" | "script" = "script";
   let ast: Program;
@@ -28,6 +32,25 @@ export const discoverChunks = (
     });
   }
 
+  // Turbopack discovery (highest priority)
+  const turbopackChunks = getTurbopackChunks(ast);
+  if (turbopackChunks.length !== 0) {
+    return turbopackChunks;
+  }
+
+  // Google lazy chunks (if enabled)
+  if (discoverGoogleLazyChunks) {
+    const googleChunks = getGoogleLazyChunks(ast);
+    if (googleChunks.length !== 0) {
+      return googleChunks;
+    }
+  }
+
+  const nextJsChunks = nextJsChunkDiscovery(ast);
+  if (nextJsChunks.length !== 0) {
+    return nextJsChunks;
+  }
+
   const webpackChunks = webpackCunkDiscovery(ast, sourceType, bruteforceLimit);
   if (webpackChunks.length !== 0) {
     return webpackChunks;
@@ -43,6 +66,11 @@ const viteChunkDiscovery = (
 ): string[] => {
   const chunks = new Set(getViteChunks(ast));
 
+  return [...chunks];
+};
+
+const nextJsChunkDiscovery = (ast: Program): string[] => {
+  const chunks = new Set(getNextJsChunks(ast));
   return [...chunks];
 };
 

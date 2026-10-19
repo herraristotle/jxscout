@@ -12,6 +12,14 @@ import {
 
 const LOADING_CHUNK_FINGERPRINT = "Loading chunk ";
 const VITE_MAP_DEPS_FINGERPRINT = "__vite__mapDeps";
+const NEXTJS_BUILD_MANIFEST_FINGERPRINT = "__BUILD_MANIFEST";
+const NEXTJS_SSG_MANIFEST_FINGERPRINT = "__SSG_MANIFEST";
+// Turbopack
+const TURBOPACK_CHUNK_FINGERPRINT = "turbopack";
+const TURBOPACK_LOADING = "turbopackLoading";
+// Google lazy-loaded chunks
+const GOOGLE_CHUNK_FINGERPRINT = "google.chunk";
+const GOOGLE_LAZY_CHUNK_FINGERPRINT = "lazyChunk";
 
 export interface ChunkLoadingFingerprintContext {
   functionContext: ChunkLoadingFunctionContext;
@@ -352,3 +360,158 @@ export const getViteChunks = (ast: Program): string[] => {
 
   return chunks;
 };
+
+// Turbopack
+export const getTurbopackChunks = (ast: Program): string[] => {
+  const chunks: string[] = [];
+
+  traverse(ast, {
+    AssignmentExpression(path) {
+      const left = path.get("left");
+      if (!is.memberExpression(left)) {
+        return;
+      }
+
+      const obj = left.node?.object;
+      const prop = left.node?.property;
+      if (!is.identifier(obj) || !is.identifier(prop)) {
+        return;
+      }
+
+      // Check for self.__TURBOPACK__ or self.__turbopack__
+      if (obj.name !== "self") {
+        return;
+      }
+
+      if (
+        prop.name !== "TURBOPACK" &&
+        prop.name !== "turbopack" &&
+        prop.name !== "TURBOPACK_LOADING"
+      ) {
+        return;
+      }
+
+      // Extract all string literals from right side
+      const right = path.get("right");
+      right.traverse({
+        Literal(literalPath) {
+          if (typeof literalPath.node?.value !== "string") {
+            return;
+          }
+
+          const value = literalPath.node.value;
+          if (value.includes(".js") || value.includes("/_next/") || value.includes("/static/chunks/")) {
+            chunks.push(value);
+          }
+        },
+      });
+    },
+    CallExpression(path) {
+      // Check for turbopackLoading calls
+      if (!is.callExpression(path)) return;
+      const callee = path.node?.callee;
+      if (!is.memberExpression(callee)) return;
+
+      const obj = callee.object;
+      const prop = callee.property;
+      if (!is.identifier(obj) || !is.identifier(prop)) return;
+
+      if (obj.name === "self" && (prop.name === "TURBOPACK_LOADING" || prop.name === "turbopackLoading")) {
+        const args = path.node?.arguments;
+        if (args && args.length > 0 && is.literal(args[0]) && typeof args[0].value === "string") {
+          chunks.push(args[0].value);
+        }
+      }
+    },
+  });
+
+  return chunks;
+};
+
+// Google lazy-loaded chunks
+export const getGoogleLazyChunks = (ast: Program): string[] => {
+  const chunks: string[] = [];
+
+  traverse(ast, {
+    CallExpression(path) {
+      if (!is.callExpression(path)) return;
+      const callee = path.node?.callee;
+      if (!is.memberExpression(callee)) return;
+
+      const obj = callee.object;
+      const prop = callee.property;
+      if (!is.identifier(obj) || !is.identifier(prop)) return;
+
+      // Check for google.chunk or google.lazyChunk patterns
+      if (obj.name === "google" && (prop.name === "chunk" || prop.name === "lazyChunk")) {
+        const args = path.node?.arguments;
+        if (args && args.length > 0) {
+          const arg = args[0];
+          if (is.literal(arg) && typeof arg.value === "string") {
+            chunks.push(arg.value);
+          }
+        }
+      }
+    },
+    // Also check for require.ensure or dynamic import with google patterns
+    ImportDeclaration(path) {
+      const source = path.node?.source;
+      if (source && typeof source.value === "string" && (source.value.includes("google") && source.value.includes("chunk"))) {
+        chunks.push(source.value);
+      }
+    },
+  });
+
+  return chunks;
+};
+
+// Next.js
+export const getNextJsChunks = (ast: Program): string[] => {
+  const chunks: string[] = [];
+
+  traverse(ast, {
+    AssignmentExpression(path) {
+      const left = path.get("left");
+      if (!is.memberExpression(left)) {
+        return;
+      }
+
+      // Check for self.__BUILD_MANIFEST or self.__SSG_MANIFEST
+      const obj = left.node?.object;
+      const prop = left.node?.property;
+      if (!is.identifier(obj) || !is.identifier(prop)) {
+        return;
+      }
+
+      if (obj.name !== "self") {
+        return;
+      }
+
+      if (
+        prop.name !== NEXTJS_BUILD_MANIFEST_FINGERPRINT &&
+        prop.name !== NEXTJS_SSG_MANIFEST_FINGERPRINT
+      ) {
+        return;
+      }
+
+      // Extract all string literals from right side (manifest object)
+      const right = path.get("right");
+      right.traverse({
+        Literal(literalPath) {
+          if (typeof literalPath.node?.value !== "string") {
+            return;
+          }
+
+          const value = literalPath.node.value;
+          // Match paths like "/_next/static/chunks/..." or static JS files
+          if (value.includes(".js") || value.includes("/_next/")) {
+            chunks.push(value);
+          }
+        },
+      });
+    },
+  });
+
+  return chunks;
+};
+

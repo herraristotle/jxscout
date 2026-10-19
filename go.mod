@@ -19,6 +19,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/projectdiscovery/goflags v0.1.74
 	github.com/samber/slog-multi v1.4.0
+	github.com/spf13/cobra v1.10.2
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/time v0.7.0
@@ -28,7 +29,9 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 )
 
 require (

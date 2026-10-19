@@ -5742,6 +5742,15 @@ const secretsAnalyzerBuilder = (
         return;
       }
 
+      // Skip React internal strings (noise reduction)
+      if (
+        node.value.includes("__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED") ||
+        node.value.includes("__REACT_DEVTOOLS_") ||
+        node.value.includes("__webpack_")
+      ) {
+        return;
+      }
+
       for (const pattern of SECRET_PATTERNS) {
         if (pattern.regex.test(node.value)) {
           const match: AnalyzerMatch = {

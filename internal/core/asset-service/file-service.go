@@ -61,7 +61,7 @@ func cleanWindows(p string) string {
 	return m1.ReplaceAllString(p, "")
 }
 
-func (s *fileServiceImpl) save(ctx context.Context, filePath []string, req SaveFileRequest) (string, error) {
+func (s *fileServiceImpl) save(_ context.Context, filePath []string, req SaveFileRequest) (string, error) {
 	targetPath, err := s.urlToPath(req.PathURL, filePath)
 	if err != nil {
 		return "", errutil.Wrap(err, "failed to convert url to path")

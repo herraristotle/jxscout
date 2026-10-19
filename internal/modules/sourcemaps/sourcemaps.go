@@ -180,6 +180,7 @@ func (s *sourceMapsModule) sourceMapDiscover(ctx context.Context, asset assetser
 		SourceMapsFolder,
 		SourceMapsReversed,
 		sourceMap.URL.Host,
+		dbSourceMap.Hash[:8], // Use first 8 chars of bundle hash for isolation
 	}
 
 	// reverseSourceMapsDir = append(reverseSourceMapsDir, assetPath...)

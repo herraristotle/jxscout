@@ -38,6 +38,8 @@ func main() {
 		flagSet.IntVar(&options.BeautifierConcurrency, constants.FlagBeautifierConcurrency, constants.DefaultBeautifierConcurrency, constants.DescriptionBeautifierConcurrency),
 		flagSet.IntVar(&options.ChunkDiscovererConcurrency, constants.FlagChunkDiscovererConcurrency, constants.DefaultChunkDiscovererConcurrency, constants.DescriptionChunkDiscovererConcurrency),
 		flagSet.IntVar(&options.ASTAnalyzerConcurrency, constants.FlagASTAnalyzerConcurrency, constants.DefaultASTAnalyzerConcurrency, constants.DescriptionASTAnalyzerConcurrency),
+		flagSet.IntVar(&options.OptimizerConcurrency, constants.FlagOptimizerConcurrency, constants.DefaultOptimizerConcurrency, constants.DescriptionOptimizerConcurrency),
+		flagSet.IntVar(&options.UnpackerConcurrency, constants.FlagUnpackerConcurrency, constants.DefaultUnpackerConcurrency, constants.DescriptionUnpackerConcurrency),
 	)
 
 	flagSet.CreateGroup("chunk discovery", "chunk discovery configuration",
@@ -61,6 +63,32 @@ func main() {
 	flagSet.CreateGroup("logging", "logging configuration",
 		flagSet.IntVar(&options.LogBufferSize, constants.FlagLogBufferSize, constants.DefaultLogBufferSize, constants.DescriptionLogBufferSize),
 		flagSet.IntVar(&options.LogFileMaxSizeMB, constants.FlagLogFileMaxSizeMB, constants.DefaultLogFileMaxSizeMB, constants.DescriptionLogFileMaxSizeMB),
+	)
+
+	flagSet.CreateGroup("memory", "memory configuration",
+		flagSet.IntVar(&options.MemoryLimitMB, constants.FlagMemoryLimitMB, constants.DefaultMemoryLimitMB, constants.DescriptionMemoryLimitMB),
+		flagSet.DurationVar(&options.MemoryUsageCheckInterval, constants.FlagMemoryUsageCheckInterval, constants.DefaultMemoryUsageCheckInterval, constants.DescriptionMemoryUsageCheckInterval),
+		flagSet.IntVar(&options.BeautifierMemoryUsageLimitMB, constants.FlagBeautifierMemoryUsageLimitMB, constants.DefaultBeautifierMemoryUsageLimitMB, constants.DescriptionBeautifierMemoryUsageLimitMB),
+		flagSet.IntVar(&options.ChunkDiscovererMemoryUsageLimitMB, constants.FlagChunkDiscovererMemoryUsageLimitMB, constants.DefaultChunkDiscovererMemoryUsageLimitMB, constants.DescriptionChunkDiscovererMemoryUsageLimitMB),
+		flagSet.IntVar(&options.ASTAnalyzerMemoryUsageLimitMB, constants.FlagASTAnalyzerMemoryUsageLimitMB, constants.DefaultASTAnalyzerMemoryUsageLimitMB, constants.DescriptionASTAnalyzerMemoryUsageLimitMB),
+		flagSet.IntVar(&options.SourceMapDiscovererMemoryUsageLimitMB, constants.FlagSourceMapDiscovererMemoryUsageLimitMB, constants.DefaultSourceMapDiscovererMemoryUsageLimitMB, constants.DescriptionSourceMapDiscovererMemoryUsageLimitMB),
+		flagSet.IntVar(&options.OptimizerMemoryUsageLimitMB, constants.FlagOptimizerMemoryUsageLimitMB, constants.DefaultOptimizerMemoryUsageLimitMB, constants.DescriptionOptimizerMemoryUsageLimitMB),
+		flagSet.IntVar(&options.UnpackerMemoryUsageLimitMB, constants.FlagUnpackerMemoryUsageLimitMB, constants.DefaultUnpackerMemoryUsageLimitMB, constants.DescriptionUnpackerMemoryUsageLimitMB),
+		flagSet.IntVar(&options.FilesystemIngestionFilesPerSecond, constants.FlagFilesystemIngestionFilesPerSecond, constants.DefaultFilesystemIngestionFilesPerSecond, constants.DescriptionFilesystemIngestionFilesPerSecond),
+	)
+
+	flagSet.CreateGroup("features", "feature toggles",
+		flagSet.BoolVar(&options.EnableOptimizer, constants.FlagEnableOptimizer, constants.DefaultEnableOptimizer, constants.DescriptionEnableOptimizer),
+		flagSet.BoolVar(&options.EnableUnpacker, constants.FlagEnableUnpacker, constants.DefaultEnableUnpacker, constants.DescriptionEnableUnpacker),
+	)
+
+	flagSet.CreateGroup("chunk discovery", "chunk discovery configuration",
+		flagSet.BoolVar(&options.DiscoverGoogleLazyChunks, constants.FlagDiscoverGoogleLazyChunks, constants.DefaultDiscoverGoogleLazyChunks, constants.DescriptionDiscoverGoogleLazyChunks),
+	)
+
+	flagSet.CreateGroup("mcp", "mcp server configuration",
+		flagSet.StringVar(&options.MCPServerHostname, constants.FlagMCPServerHostname, constants.DefaultMCPServerHostname, constants.DescriptionMCPServerHostname),
+		flagSet.IntVar(&options.MCPServerPort, constants.FlagMCPServerPort, constants.DefaultMCPServerPort, constants.DescriptionMCPServerPort),
 	)
 
 	flagSet.CreateGroup("overrides", "overrides configuration",

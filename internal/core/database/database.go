@@ -30,3 +30,9 @@ func GetDatabase(projectName string) (*sqlx.DB, error) {
 
 	return db, nil
 }
+
+func InitializeDatabase(db *sqlx.DB) error {
+	// This will be called by the asset service repo initialization
+	// but we can also add additional tables here if needed
+	return nil
+}
