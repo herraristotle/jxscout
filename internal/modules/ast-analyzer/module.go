@@ -175,7 +175,7 @@ func (m *astAnalyzerModule) subscribeAssetBeautified() error {
 			AssetType: AssetTypeOriginalAsset,
 		}
 
-		_, err = m.analyzeAsset(asset)
+		_, err = m.analyzeAsset(asset, event.Updated)
 		if err != nil {
 			return errutil.Wrapf(err, "failed to analyze asset: %s", asset.Path)
 		}
@@ -208,7 +208,7 @@ func (m *astAnalyzerModule) subscribeAssetBeautified() error {
 			AssetType: AssetTypeReversedSourcemap,
 		}
 
-		_, err = m.analyzeAsset(asset)
+		_, err = m.analyzeAsset(asset, false)
 		if err != nil {
 			return errutil.Wrapf(err, "failed to analyze asset: %s", asset.Path)
 		}
@@ -244,14 +244,14 @@ type Position struct {
 	Column int64 `json:"column"`
 }
 
-func (m *astAnalyzerModule) analyzeAsset(asset asset) (astAnalysis, error) {
+func (m *astAnalyzerModule) analyzeAsset(asset asset, force bool) (astAnalysis, error) {
 	// Get existing analyses for this asset
 	analysis, found, err := m.repo.getASTAnalysisByAssetID(m.sdk.Ctx, asset.ID, asset.AssetType)
 	if err != nil {
 		return analysis, dbeventbus.NewRetriableError(errutil.Wrap(err, "failed to get existing analyses"))
 	}
 
-	if found && analysis.AnalyzerVersion == analyzerVersion {
+	if found && analysis.AnalyzerVersion == analyzerVersion && !force {
 		m.sdk.Logger.Debug("analysis is up to date, skipping", "asset_id", asset.ID, "analysis", analysis.ID)
 		return analysis, nil
 	}
@@ -279,6 +279,37 @@ func (m *astAnalyzerModule) analyzeAsset(asset asset) (astAnalysis, error) {
 	// Store the results in the database
 	if err := m.repo.createAnalysis(m.sdk.Ctx, analysis); err != nil {
 		return analysis, dbeventbus.NewRetriableError(errutil.Wrap(err, "failed to store ast analysis results"))
+	}
+
+	// Notify subscribers (hooks) that matches were created
+	if len(output) > 0 {
+		fileType := "js"
+		if asset.AssetType == AssetTypeReversedSourcemap {
+			fileType = "reversed_source"
+		} else if asset.ContentType == string(common.ContentTypeHTML) {
+			fileType = "html"
+		}
+
+		matches := make([]map[string]any, 0, len(output))
+		for _, m := range output {
+			matches = append(matches, map[string]any{
+				"match_kind":  m.AnalyzerName,
+				"match_value": m.Value,
+				"position": map[string]any{
+					"start": map[string]any{"line": m.Start.Line, "column": m.Start.Column},
+					"end":   map[string]any{"line": m.End.Line, "column": m.End.Column},
+				},
+			})
+		}
+
+		if err := m.sdk.DBEventBus.Publish(m.sdk.Ctx, m.sdk.Database, "ast_analyzer.matches_created", struct {
+			AssetID  int64          `json:"asset_id"`
+			FileType string         `json:"file_type"`
+			FilePath string         `json:"file_path"`
+			Matches  []map[string]any `json:"matches"`
+		}{AssetID: asset.ID, FileType: fileType, FilePath: asset.Path, Matches: matches}); err != nil {
+			m.sdk.Logger.Error("failed to publish matches_created event", "asset_id", asset.ID, "error", err)
+		}
 	}
 
 	return analysis, nil

@@ -148,3 +148,20 @@ func (r *astAnalyzerRepository) getASTAnalysisByAssetID(ctx context.Context, ass
 
 	return analysis, true, nil
 }
+
+// getAllASTAnalyses returns all non-deleted analysis results (project-wide view).
+func (r *astAnalyzerRepository) getAllASTAnalyses(ctx context.Context) ([]astAnalysis, error) {
+	query := `
+		SELECT *
+		FROM ast_analysis_results
+		WHERE deleted_at IS NULL
+		ORDER BY asset_path
+	`
+
+	var analyses []astAnalysis
+	if err := r.db.SelectContext(ctx, &analyses, query); err != nil {
+		return nil, errutil.Wrap(err, "failed to get all ast analyses")
+	}
+
+	return analyses, nil
+}

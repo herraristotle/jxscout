@@ -9,32 +9,74 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/francisconeves97/jxscout/internal/core/common"
 	"github.com/francisconeves97/jxscout/internal/core/dbeventbus"
 	"github.com/francisconeves97/jxscout/internal/core/errutil"
+	"github.com/francisconeves97/jxscout/internal/modules/beautifier"
+	"github.com/francisconeves97/jxscout/internal/settings"
 	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
 )
 
 //go:embed optimizer.js
 var optimizerBinary []byte
 
+//go:embed parser.linux-x64-gnu.node
+var parserLinuxX64Gnu []byte
+
+//go:embed parser.linux-x64-musl.node
+var parserLinuxX64Musl []byte
+
 type optimizerModule struct {
-	sdk                   *jxscouttypes.ModuleSDK
-	concurrency           int
-	optimizerBinaryPath   string
+	sdk                 *jxscouttypes.ModuleSDK
+	concurrency         int
+	optimizerBinaryPath string
+	transformers        string // comma-separated: json_parse,variable_inliner,string_concat
+	iterations          int
+	nativeLibraryPath   string
 }
 
 func NewOptimizerModule(concurrency int) *optimizerModule {
 	return &optimizerModule{
 		concurrency: concurrency,
+		// Pro v2 defaults: all three transformers, single pass; settings override
+		transformers: "json_parse,variable_inliner,string_concat",
+		iterations:   1,
 	}
 }
 
 func (m *optimizerModule) Initialize(sdk *jxscouttypes.ModuleSDK) error {
 	m.sdk = sdk
+
+	// Pro v2 beautifier.transformations settings
+	if loader := settings.NewSettingsLoader(sdk.Options.ProjectName); true {
+		if s, err := loader.LoadSettings(); err == nil {
+			if arr, ok := s.Get("beautifier.transformations.transformers"); ok {
+				if list, ok := arr.([]interface{}); ok {
+					names := make([]string, 0, len(list))
+					for _, t := range list {
+						if str, ok := t.(string); ok && str != "" {
+							names = append(names, str)
+						}
+					}
+					if len(names) > 0 {
+						m.transformers = strings.Join(names, ",")
+					}
+				}
+			}
+			if v, ok := s.GetInt("beautifier.transformations.iterations"); ok && v > 0 {
+				m.iterations = v
+			}
+		}
+	}
+
+	if !sdk.Options.EnableOptimizer {
+		sdk.Logger.Info("optimizer module disabled (enable-optimizer=false)")
+		return nil
+	}
 
 	saveDir := filepath.Join(common.GetPrivateDirectoryRoot(), "extracted")
 	if err := os.MkdirAll(saveDir, 0755); err != nil {
@@ -47,17 +89,52 @@ func (m *optimizerModule) Initialize(sdk *jxscouttypes.ModuleSDK) error {
 	}
 	m.optimizerBinaryPath = binaryPath
 
+	// write platform parser binding if we embed one for this platform
+	if data, ok := m.platformParser(); ok {
+		parserPath := filepath.Join(saveDir, "parser.node")
+		if err := os.WriteFile(parserPath, data, 0755); err != nil {
+			return errutil.Wrap(err, "failed to write optimizer parser binding")
+		}
+		m.nativeLibraryPath = parserPath
+	}
+
 	go func() {
 		if err := m.subscribeBeautifiedAssets(); err != nil {
 			m.sdk.Logger.Error("failed to subscribe to beautified assets", "err", err)
 		}
 	}()
 
+	m.sdk.Logger.Info("optimizer module initialized", "transformers", m.transformers, "iterations", m.iterations)
+
 	return nil
 }
 
+// platformParser returns the embedded oxc parser binding for this platform (if available)
+func (m *optimizerModule) platformParser() ([]byte, bool) {
+	if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
+		return nil, false
+	}
+	if libc, err := getLibcVariant(); err == nil && libc == "musl" {
+		return parserLinuxX64Musl, true
+	}
+	return parserLinuxX64Gnu, true
+}
+
+func getLibcVariant() (string, error) {
+	cmd := exec.Command("ldd", "--version")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "gnu", nil // ldd --version exits 1 on some systems while still printing
+	}
+	output := strings.ToLower(string(out))
+	if strings.Contains(output, "musl") {
+		return "musl", nil
+	}
+	return "gnu", nil
+}
+
 func (m *optimizerModule) subscribeBeautifiedAssets() error {
-	return m.sdk.DBEventBus.Subscribe(m.sdk.Ctx, "beautifier.asset.saved", "optimizer", func(ctx context.Context, payload []byte) error {
+	return m.sdk.DBEventBus.Subscribe(m.sdk.Ctx, beautifier.TopicBeautifierAssetSaved, "optimizer", func(ctx context.Context, payload []byte) error {
 		var event struct {
 			AssetID int64 `json:"asset_id"`
 		}
@@ -99,8 +176,13 @@ func (m *optimizerModule) optimizeAsset(ctx context.Context, asset jxscouttypes.
 		return nil, errutil.Wrap(err, "failed to get absolute path")
 	}
 
-	cmd := exec.CommandContext(ctx, "bun", "run", m.optimizerBinaryPath, absPath)
-	m.sdk.Logger.Debug("executing optimizer", "asset_id", asset.ID, "path", absPath)
+	// Pro v2: bun run optimizer.js <file> <transformers_csv> <iterations>
+	cmd := exec.CommandContext(ctx, "bun", "run", m.optimizerBinaryPath, absPath, m.transformers, fmt.Sprint(m.iterations))
+	m.sdk.Logger.Debug("executing optimizer", "asset_id", asset.ID, "path", absPath, "transformers", m.transformers, "iterations", m.iterations)
+
+	if m.nativeLibraryPath != "" {
+		cmd.Env = append(os.Environ(), "NAPI_RS_NATIVE_LIBRARY_PATH="+m.nativeLibraryPath)
+	}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -126,7 +208,7 @@ func (m *optimizerModule) optimizeAsset(ctx context.Context, asset jxscouttypes.
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return nil, errutil.Wrap(err, "optimizer process failed")
+		return nil, errutil.Wrapf(err, "optimizer process failed: %s", strings.TrimSpace(string(stderrBytes)))
 	}
 
 	if len(stderrBytes) > 0 {

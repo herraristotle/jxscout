@@ -53,6 +53,7 @@ const GuideContent = `
 `
 
 func (t *TUI) RegisterDefaultCommands() {
+	t.registerEventCommands()
 	t.RegisterCommand(Command{
 		Name:        "clear",
 		ShortName:   "c",

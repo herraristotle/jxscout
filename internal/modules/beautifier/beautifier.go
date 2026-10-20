@@ -58,7 +58,7 @@ func (m *beautifierModule) subscribeAssetSavedEvent() error {
 			return dbeventbus.NewRetriableError(errutil.Wrap(err, "failed to get asset"))
 		}
 
-		err = m.handleAssetSavedEvent(ctx, asset)
+		err = m.handleAssetSavedEvent(ctx, asset, event.Updated)
 		if err != nil {
 			return errutil.Wrapf(err, "failed to handle asset saved event for asset (%s)", asset.URL)
 		}
@@ -78,7 +78,7 @@ func (m *beautifierModule) subscribeAssetSavedEvent() error {
 	return nil
 }
 
-func (m *beautifierModule) handleAssetSavedEvent(ctx context.Context, asset assetservice.Asset) error {
+func (m *beautifierModule) handleAssetSavedEvent(ctx context.Context, asset assetservice.Asset, updated bool) error {
 	if isValid, ok := validBeautifierContentTypes[asset.ContentType]; !ok || !isValid {
 		return nil
 	}
@@ -95,6 +95,7 @@ func (m *beautifierModule) handleAssetSavedEvent(ctx context.Context, asset asse
 
 	err = m.sdk.DBEventBus.Publish(ctx, m.sdk.Database, TopicBeautifierAssetSaved, EventBeautifierAssetSaved{
 		AssetID: asset.ID,
+		Updated: updated,
 	})
 	if err != nil {
 		return errutil.Wrap(err, "failed to publish asset saved event")

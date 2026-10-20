@@ -62,6 +62,7 @@ type Options struct {
 	LogFileMaxSizeMB                 int                 `yaml:"log-file-max-size-mb"`
 	CaidoHostname                    string              `yaml:"caido-hostname"`
 	CaidoPort                        int                 `yaml:"caido-port"`
+	Monitoring                       bool                `yaml:"monitoring"`
 	OverrideContentCheckInterval     time.Duration       `yaml:"override-content-check-interval"`
 	EnableOptimizer                  bool                `yaml:"enable-optimizer"`
 	EnableUnpacker                   bool                `yaml:"enable-unpacker"`

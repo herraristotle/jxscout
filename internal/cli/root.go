@@ -2,24 +2,34 @@ package cli
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/francisconeves97/jxscout/internal/core/common"
+	"github.com/francisconeves97/jxscout/internal/core/database"
+	"github.com/francisconeves97/jxscout/internal/core/findings"
+	monitoring "github.com/francisconeves97/jxscout/internal/modules/monitoring"
+	"github.com/francisconeves97/jxscout/internal/settings"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/cobra"
 )
 
 var (
-	projectName string
+	projectName  string
 	outputFormat string
 )
 
@@ -32,6 +42,19 @@ var rootCmd = &cobra.Command{
 // Execute runs the root command
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+// RegisterCommands exports CLI commands for main binary integration
+func RegisterCommands(parent *cobra.Command) {
+	parent.AddCommand(wordlistCmd)
+	parent.AddCommand(queryCmd)
+	parent.AddCommand(fsIngestCmd)
+	parent.AddCommand(backupCmd)
+	parent.AddCommand(createFindingCmd)
+	parent.AddCommand(listFindingsCmd)
+	parent.AddCommand(printFullSettingsCmd)
+	parent.AddCommand(repeaterCmd)
+	parent.AddCommand(monitorCmd)
 }
 
 func init() {
@@ -309,19 +332,19 @@ func queryAssets(ctx context.Context, db *sqlx.DB) error {
 	args = append(args, limit)
 
 	var assets []struct {
-		ID                int64            `db:"id"`
-		URL               string           `db:"url"`
-		ContentHash       string           `db:"content_hash"`
-		ContentType       string           `db:"content_type"`
-		FileSystemPath    string           `db:"fs_path"`
-		Project           string           `db:"project"`
-		RequestHeaders    *string          `db:"request_headers"`
-		CreatedAt         *string          `db:"created_at"`
-		UpdatedAt         *string          `db:"updated_at"`
-		IsInlineJS        bool             `db:"is_inline_js"`
-		IsChunkDiscovered *bool            `db:"is_chunk_discovered"`
-		ChunkFromAssetID  *int64           `db:"chunk_from_asset_id"`
-		IsBeautified      bool             `db:"is_beautified"`
+		ID                int64   `db:"id"`
+		URL               string  `db:"url"`
+		ContentHash       string  `db:"content_hash"`
+		ContentType       string  `db:"content_type"`
+		FileSystemPath    string  `db:"fs_path"`
+		Project           string  `db:"project"`
+		RequestHeaders    *string `db:"request_headers"`
+		CreatedAt         *string `db:"created_at"`
+		UpdatedAt         *string `db:"updated_at"`
+		IsInlineJS        bool    `db:"is_inline_js"`
+		IsChunkDiscovered *bool   `db:"is_chunk_discovered"`
+		ChunkFromAssetID  *int64  `db:"chunk_from_asset_id"`
+		IsBeautified      bool    `db:"is_beautified"`
 	}
 	err := db.SelectContext(ctx, &assets, query, args...)
 	if err != nil {
@@ -442,7 +465,7 @@ var fsIngestCmd = &cobra.Command{
 }
 
 var (
-	recursive bool
+	recursive  bool
 	extensions []string
 )
 
@@ -742,4 +765,427 @@ func runBackup(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Compression ratio: %.1f%%\n", (1.0-float64(outFileInfo.Size())/float64(totalSize))*100)
 
 	return nil
+}
+
+// Findings commands (Pro v2 findings feature)
+var createFindingCmd = &cobra.Command{
+	Use:   "create-finding",
+	Short: "Create a structured security finding",
+	Long:  "Create a finding with kind/severity/description, deduplicated on kind+dedup-key. Publishes the finding_created hook event.",
+	RunE:  runCreateFinding,
+}
+
+var listFindingsCmd = &cobra.Command{
+	Use:   "list-findings",
+	Short: "List structured security findings",
+	RunE:  runListFindings,
+}
+
+var (
+	findingKind        string
+	findingSeverity    string
+	findingDescription string
+	findingDedupKey    string
+	findingMetadata    string
+	findingFilterKind  string
+	findingFilterSev   string
+	findingLimit       int
+	findingOffset      int
+)
+
+func init() {
+	createFindingCmd.Flags().StringVar(&findingKind, "kind", "", "finding type (e.g. secret, pii, vulnerability, idor, xss)")
+	createFindingCmd.Flags().StringVar(&findingSeverity, "severity", "", "severity: low|medium|high|critical")
+	createFindingCmd.Flags().StringVar(&findingDescription, "description", "", "human-readable description")
+	createFindingCmd.Flags().StringVar(&findingDedupKey, "dedup-key", "", "deduplication key (same kind+key returns existing)")
+	createFindingCmd.Flags().StringVar(&findingMetadata, "metadata", "", "JSON object with extra data (e.g. file_path, url)")
+
+	listFindingsCmd.Flags().StringVar(&findingFilterKind, "kind", "", "filter by kind")
+	listFindingsCmd.Flags().StringVar(&findingFilterSev, "severity", "", "filter by severity")
+	listFindingsCmd.Flags().IntVar(&findingLimit, "limit", 50, "max results")
+	listFindingsCmd.Flags().IntVar(&findingOffset, "offset", 0, "result offset")
+
+	rootCmd.AddCommand(createFindingCmd)
+	rootCmd.AddCommand(listFindingsCmd)
+}
+
+func openProjectDB() (*sqlx.DB, error) {
+	return database.GetDatabase(projectName)
+}
+
+func runCreateFinding(cmd *cobra.Command, args []string) error {
+	db, err := openProjectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	if err := findings.InitializeTable(db); err != nil {
+		return fmt.Errorf("failed to initialize findings table: %w", err)
+	}
+
+	id, deduped, err := findings.Create(context.Background(), db, findings.CreateRequest{
+		Kind:        findingKind,
+		Severity:    findingSeverity,
+		Description: findingDescription,
+		DedupKey:    findingDedupKey,
+		Metadata:    findingMetadata,
+	})
+	if err != nil {
+		return err
+	}
+
+	result := map[string]any{
+		"success":    !deduped,
+		"finding_id": id,
+		"message":    "Finding created with ID: " + fmt.Sprint(id),
+	}
+	if deduped {
+		result["finding_id"] = nil
+		result["message"] = "Finding was deduplicated (already exists)"
+	}
+
+	return printResult(result)
+}
+
+func runListFindings(cmd *cobra.Command, args []string) error {
+	db, err := openProjectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	if err := findings.InitializeTable(db); err != nil {
+		return fmt.Errorf("failed to initialize findings table: %w", err)
+	}
+
+	items, total, err := findings.List(context.Background(), db, findingFilterSev, findingFilterKind, findingLimit, findingOffset)
+	if err != nil {
+		return err
+	}
+
+	return printResult(map[string]any{
+		"findings": items,
+		"total":    total,
+	})
+}
+
+func printResult(v any) error {
+	if outputFormat == "json" {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(v)
+	}
+	// text format
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(data))
+	return nil
+}
+
+// print-full-project-settings dumps the merged settings (defaults + global + shared + project)
+var printFullSettingsCmd = &cobra.Command{
+	Use:   "print-full-project-settings",
+	Short: "Print the full merged project settings (Pro v2)",
+	RunE:  runPrintFullSettings,
+}
+
+func init() {
+	rootCmd.AddCommand(printFullSettingsCmd)
+}
+
+func runPrintFullSettings(cmd *cobra.Command, args []string) error {
+	loader := settings.NewSettingsLoader(projectName)
+	s, err := loader.LoadSettings()
+	if err != nil {
+		return err
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(s.Data)
+}
+
+// Repeater command (Pro v2 repeater feature, used by agent skills)
+var repeaterCmd = &cobra.Command{
+	Use:   "repeater <req_file>",
+	Short: "Send a raw HTTP request from a file and save timestamped req/res copies",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runRepeater,
+}
+
+func init() {
+	rootCmd.AddCommand(repeaterCmd)
+}
+
+func runRepeater(cmd *cobra.Command, args []string) error {
+	reqPath := args[0]
+	raw, err := os.ReadFile(reqPath)
+	if err != nil {
+		return fmt.Errorf("failed to read request file: %w", err)
+	}
+
+	// Split head/body on the first blank line
+	head := raw
+	var body []byte
+	if idx := strings.Index(string(raw), "\r\n\r\n"); idx >= 0 {
+		head = raw[:idx]
+		body = raw[idx+4:]
+	} else if idx := strings.Index(string(raw), "\n\n"); idx >= 0 {
+		head = raw[:idx]
+		body = raw[idx+2:]
+	}
+
+	lines := strings.Split(string(head), "\n")
+	if len(lines) == 0 {
+		return fmt.Errorf("empty request file")
+	}
+	requestLine := strings.TrimRight(lines[0], "\r")
+	parts := strings.Split(requestLine, " ")
+	if len(parts) < 2 {
+		return fmt.Errorf("malformed request line: %q", requestLine)
+	}
+	method := parts[0]
+	target := parts[1]
+
+	var host, path, scheme string
+	path = target
+	// absolute-form request target
+	if strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://") {
+		u, err := url.Parse(target)
+		if err != nil {
+			return fmt.Errorf("failed to parse absolute request target: %w", err)
+		}
+		scheme = u.Scheme
+		host = u.Host
+		path = u.RequestURI()
+	}
+
+	// collect headers
+	var headerStrings []string
+	for _, line := range lines[1:] {
+		line = strings.TrimRight(line, "\r")
+		if line == "" {
+			continue
+		}
+		hname, _, _ := strings.Cut(line, ":")
+		if strings.EqualFold(strings.TrimSpace(hname), "host") && host == "" {
+			host = strings.TrimSpace(strings.TrimPrefix(line, hname))
+		}
+		if strings.EqualFold(strings.TrimSpace(hname), "content-length") {
+			continue // recomputed below
+		}
+		headerStrings = append(headerStrings, line)
+	}
+	if host == "" {
+		return fmt.Errorf("no Host header or absolute URL in request")
+	}
+
+	// set Content-Length from actual body (per repeater skill: never recompute manually)
+	if len(body) > 0 || method == "POST" || method == "PUT" || method == "PATCH" {
+		headerStrings = append(headerStrings, fmt.Sprintf("Content-Length: %d", len(body)))
+	}
+
+	// connect: https if scheme says so or port is 443
+	addr := host
+	tlsConn := scheme == "https" || strings.HasSuffix(host, ":443")
+	if !strings.Contains(host, ":") {
+		if tlsConn {
+			addr = host + ":443"
+		} else {
+			addr = host + ":80"
+		}
+	}
+
+	var conn net.Conn
+	if tlsConn {
+		conn, err = tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
+	} else {
+		conn, err = net.DialTimeout("tcp", addr, 10*time.Second)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to connect to %s: %w", addr, err)
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(30 * time.Second))
+
+	// build raw request
+	var reqBuf bytes.Buffer
+	reqBuf.WriteString(fmt.Sprintf("%s %s HTTP/1.1\r\n", method, path))
+	for _, h := range headerStrings {
+		reqBuf.WriteString(h)
+		reqBuf.WriteString("\r\n")
+	}
+	reqBuf.WriteString("\r\n")
+	reqBuf.Write(body)
+
+	if _, err := conn.Write(reqBuf.Bytes()); err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+
+	// read response until EOF/timeout
+	respBytes, err := io.ReadAll(conn)
+	if err != nil && len(respBytes) == 0 {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	// parse status code for filenames
+	status := "000"
+	if len(respBytes) > 0 {
+		firstLine := string(respBytes)
+		if idx := strings.Index(firstLine, "\r\n"); idx > 0 {
+			firstLine = firstLine[:idx]
+		}
+		sp := strings.SplitN(firstLine, " ", 3)
+		if len(sp) >= 2 {
+			status = sp[1]
+		}
+	}
+
+	// save timestamped copies next to the input file
+	base := strings.TrimSuffix(reqPath, filepath.Ext(reqPath))
+	ts := time.Now().Format("20060102150405")
+	sentReq := reqBuf.Bytes()
+	if err := os.WriteFile(fmt.Sprintf("%s_%s_%s.req", base, ts, status), sentReq, 0644); err != nil {
+		return fmt.Errorf("failed to save .req copy: %w", err)
+	}
+	if err := os.WriteFile(fmt.Sprintf("%s_%s_%s.res", base, ts, status), respBytes, 0644); err != nil {
+		return fmt.Errorf("failed to save .res file: %w", err)
+	}
+
+	// stdout: raw HTTP response (per repeater skill contract)
+	os.Stdout.Write(respBytes)
+	if len(respBytes) > 0 && respBytes[len(respBytes)-1] != '\n' {
+		os.Stdout.WriteString("\n")
+	}
+	return nil
+}
+
+// Monitor commands (Pro v2 monitoring mode)
+var monitorCmd = &cobra.Command{
+	Use:   "monitor",
+	Short: "Manage scheduled monitors (Pro v2)",
+}
+
+var monitorCreateCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create a scheduled monitor",
+	RunE:  runMonitorCreate,
+}
+
+var monitorListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List monitors",
+	RunE:  runMonitorList,
+}
+
+var monitorTestCmd = &cobra.Command{
+	Use:   "send-test-notifications",
+	Short: "Send test notifications for every enabled kind (monitoring_notifier)",
+	RunE:  runMonitorSendTest,
+}
+
+var (
+	monitorName    string
+	monitorType    string
+	monitorURLs    string
+	monitorScript  string
+	monitorCron    string
+	monitorDisable bool
+)
+
+func init() {
+	monitorCreateCmd.Flags().StringVar(&monitorName, "name", "", "monitor name (required)")
+	monitorCreateCmd.Flags().StringVar(&monitorType, "type", "url", "monitor type: url | script")
+	monitorCreateCmd.Flags().StringVar(&monitorURLs, "urls", "", "comma-separated URL patterns (* wildcards allowed, for type=url)")
+	monitorCreateCmd.Flags().StringVar(&monitorScript, "script", "", "shell script to run (for type=script; receives {proxy_host,proxy_port} on stdin)")
+	monitorCreateCmd.Flags().StringVar(&monitorCron, "cron", "* * * * *", "5-field cron schedule")
+	monitorCreateCmd.Flags().BoolVar(&monitorDisable, "disabled", false, "create the monitor disabled")
+
+	monitorCmd.AddCommand(monitorCreateCmd)
+	monitorCmd.AddCommand(monitorListCmd)
+	monitorCmd.AddCommand(monitorTestCmd)
+	rootCmd.AddCommand(monitorCmd)
+}
+
+func runMonitorCreate(cmd *cobra.Command, args []string) error {
+	if monitorName == "" {
+		return fmt.Errorf("--name is required")
+	}
+	var urlsJSON string
+	if monitorURLs != "" {
+		parts := strings.Split(monitorURLs, ",")
+		for i := range parts {
+			parts[i] = strings.TrimSpace(parts[i])
+		}
+		data, err := json.Marshal(parts)
+		if err != nil {
+			return err
+		}
+		urlsJSON = string(data)
+	}
+
+	db, err := openProjectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	if err := monitoring.InitializeTable(db); err != nil {
+		return fmt.Errorf("failed to initialize monitors table: %w", err)
+	}
+
+	id, err := monitoring.CreateMonitor(db, monitoring.Monitor{
+		Name: monitorName, Type: monitorType, URLs: urlsJSON,
+		Script: monitorScript, Cron: monitorCron, Enabled: !monitorDisable,
+	})
+	if err != nil {
+		return err
+	}
+	return printResult(map[string]any{"success": true, "id": id})
+}
+
+func runMonitorList(cmd *cobra.Command, args []string) error {
+	db, err := openProjectDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	if err := monitoring.InitializeTable(db); err != nil {
+		return fmt.Errorf("failed to initialize monitors table: %w", err)
+	}
+
+	monitors, err := monitoring.ListMonitors(db)
+	if err != nil {
+		return err
+	}
+	return printResult(map[string]any{"monitors": monitors, "total": len(monitors)})
+}
+
+func runMonitorSendTest(cmd *cobra.Command, args []string) error {
+	loader := settings.NewSettingsLoader(projectName)
+	s, err := loader.LoadSettings()
+	if err != nil {
+		return err
+	}
+	raw, ok := s.Get("monitoring_notifier")
+	if !ok {
+		return fmt.Errorf("monitoring_notifier not configured in settings")
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	cfg := &monitoring.NotifierConfig{}
+	if err := json.Unmarshal(data, cfg); err != nil {
+		return err
+	}
+
+	notifier := &monitoring.Notifier{WebhookURL: cfg.DiscordWebhookURL, Log: slog.Default()}
+	if err := notifier.SendTestNotifications(cfg); err != nil {
+		return err
+	}
+	return printResult(map[string]any{"success": true, "message": "test notifications sent"})
 }

@@ -1,0 +1,288 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "JXScout Project Settings",
+  "type": "object",
+  "properties": {
+    "server": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "default": "localhost"
+        },
+        "port": {
+          "type": "integer",
+          "default": 8080,
+          "minimum": 1,
+          "maximum": 65535
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "scope_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "debug": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "concurrency": {
+      "type": "object",
+      "properties": {
+        "asset_fetch": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1
+        },
+        "asset_save": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 1
+        },
+        "beautifier": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 1
+        },
+        "chunk_discoverer": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 1
+        },
+        "ast_analyzer": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 1
+        },
+        "optimizer": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 1
+        },
+        "unpacker": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 1
+        }
+      }
+    },
+    "chunk_discovery": {
+      "type": "object",
+      "properties": {
+        "brute_force_limit": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 0
+        },
+        "google_lazy_chunks": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "properties": {
+        "js_requests_ttl": {
+          "type": "string",
+          "default": "24h"
+        },
+        "html_requests_ttl": {
+          "type": "string",
+          "default": "1h"
+        }
+      }
+    },
+    "rate_limiting": {
+      "type": "object",
+      "properties": {
+        "max_requests_per_second": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1
+        },
+        "max_requests_per_minute": {
+          "type": "integer",
+          "default": 100,
+          "minimum": 1
+        },
+        "per_host_limits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "optimizer_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "unpacker_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "screenshots_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "hooks_enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "script": {
+              "type": "string"
+            },
+            "concurrency": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "script"
+          ]
+        }
+      },
+      "properties": {
+        "process_configuration": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "concurrency": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "limit_mb": {
+          "type": "integer",
+          "default": 0,
+          "minimum": 0
+        },
+        "check_interval": {
+          "type": "string",
+          "default": "30s"
+        },
+        "beautifier_limit_mb": {
+          "type": "integer",
+          "default": 512
+        },
+        "chunk_discoverer_limit_mb": {
+          "type": "integer",
+          "default": 512
+        },
+        "ast_analyzer_limit_mb": {
+          "type": "integer",
+          "default": 512
+        },
+        "optimizer_limit_mb": {
+          "type": "integer",
+          "default": 512
+        },
+        "unpacker_limit_mb": {
+          "type": "integer",
+          "default": 512
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "default": "localhost"
+        },
+        "port": {
+          "type": "integer",
+          "default": 9998
+        }
+      }
+    },
+    "overrides": {
+      "type": "object",
+      "properties": {
+        "caido_hostname": {
+          "type": "string",
+          "default": "localhost"
+        },
+        "caido_port": {
+          "type": "integer",
+          "default": 8080
+        },
+        "check_interval": {
+          "type": "string",
+          "default": "5m"
+        }
+      }
+    },
+    "proxy_rotation": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "strategy": {
+          "type": "string",
+          "enum": [
+            "round-robin",
+            "random",
+            "least-used"
+          ],
+          "default": "round-robin"
+        },
+        "max_failures": {
+          "type": "integer",
+          "default": 3
+        }
+      }
+    },
+    "screenshots": {
+      "type": "object",
+      "properties": {
+        "concurrency": {
+          "type": "integer",
+          "default": 2,
+          "minimum": 1
+        },
+        "timeout": {
+          "type": "string",
+          "default": "30s"
+        },
+        "viewport": {
+          "type": "string",
+          "default": "1920x1080"
+        }
+      }
+    }
+  }
+}

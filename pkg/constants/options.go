@@ -59,6 +59,8 @@ const (
 	// Overrides configuration
 	DefaultCaidoHostname                = "localhost"
 	DefaultCaidoPort                    = 8080
+	FlagMonitoring                      = "monitoring"
+	DescriptionMonitoring               = "run in monitoring mode: execute monitors and send notifications on updates"
 	DefaultOverrideContentCheckInterval = time.Second * 5
 
 	// Feature toggles

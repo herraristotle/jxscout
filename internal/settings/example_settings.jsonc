@@ -1,0 +1,104 @@
+// JXScout Project Settings Example
+// Copy to ~/.jxscout/global_settings.jsonc for global settings
+// Or to .jxscout/<project>/settings.jsonc for project-specific settings
+
+{
+  "server": {
+    "hostname": "localhost",
+    "port": 8080
+  },
+  "project": {
+    "name": "my-project",
+    "scope_patterns": [
+      "*.example.com",
+      "api.example.com"
+    ],
+    "debug": false
+  },
+  "concurrency": {
+    "asset_fetch": 10,
+    "asset_save": 5,
+    "beautifier": 3,
+    "chunk_discoverer": 5,
+    "ast_analyzer": 5,
+    "optimizer": 3,
+    "unpacker": 3
+  },
+  "chunk_discovery": {
+    "brute_force_limit": 100,
+    "google_lazy_chunks": false
+  },
+  "cache": {
+    "js_requests_ttl": "24h",
+    "html_requests_ttl": "1h"
+  },
+  "rate_limiting": {
+    "max_requests_per_second": 10,
+    "max_requests_per_minute": 100,
+    "per_host_limits": {
+      "*.cdn.example.com": "50/s",
+      "api.github.com": "5/s"
+    }
+  },
+  "features": {
+    "optimizer_enabled": true,
+    "unpacker_enabled": true,
+    "screenshots_enabled": false,
+    "hooks_enabled": true
+  },
+  "hooks": {
+    // v2 hooks: event -> process name -> {script, concurrency}
+    // Available events: js_file_saved, js_file_updated, js_file_beautified,
+    //   html_file_saved, html_file_updated, html_file_beautified,
+    //   reversed_source_map_file_saved, matches_created, finding_created
+    "process_configuration": {
+      "log_payload": { "concurrency": 10 }
+    },
+    "js_file_saved": {
+      "log_payload": { "script": "$JXSCOUT_PROJECT_DIR/scripts/log_payload.sh js_file_saved" }
+    },
+    "js_file_beautified": {
+      "log_payload": { "script": "$JXSCOUT_PROJECT_DIR/scripts/log_payload.sh js_file_beautified" }
+    },
+    "html_file_saved": {
+      "log_payload": { "script": "$JXSCOUT_PROJECT_DIR/scripts/log_payload.sh html_file_saved" }
+    },
+    "html_file_beautified": {
+      "log_payload": { "script": "$JXSCOUT_PROJECT_DIR/scripts/log_payload.sh html_file_beautified" }
+    },
+    "reversed_source_map_file_saved": {
+      "log_payload": { "script": "$JXSCOUT_PROJECT_DIR/scripts/log_payload.sh reversed_source_map_file_saved" }
+    },
+    "matches_created": {
+      "log_payload": { "script": "$JXSCOUT_PROJECT_DIR/scripts/log_payload.sh matches_created", "concurrency": 5 }
+    }
+  },
+  "memory": {
+    "limit_mb": 2048,
+    "check_interval": "30s",
+    "beautifier_limit_mb": 512,
+    "chunk_discoverer_limit_mb": 512,
+    "ast_analyzer_limit_mb": 512,
+    "optimizer_limit_mb": 512,
+    "unpacker_limit_mb": 512
+  },
+  "mcp": {
+    "hostname": "localhost",
+    "port": 9998
+  },
+  "overrides": {
+    "caido_hostname": "localhost",
+    "caido_port": 8080,
+    "check_interval": "5m"
+  },
+  "proxy_rotation": {
+    "enabled": false,
+    "strategy": "round-robin",
+    "max_failures": 3
+  },
+  "screenshots": {
+    "concurrency": 2,
+    "timeout": "30s",
+    "viewport": "1920x1080"
+  }
+}

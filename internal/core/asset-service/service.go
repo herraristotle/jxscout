@@ -282,6 +282,7 @@ func (s *assetService) handleSaveAssetRequest(ctx context.Context, asset *Asset)
 
 	err = s.eventBus.Publish(ctx, s.db, TopicAssetSaved, EventAssetSaved{
 		AssetID: assetID,
+		Updated: exists && asset.Content != nil && dbAsset.ContentHash != common.Hash(*asset.Content),
 	})
 	if err != nil {
 		return errutil.Wrap(err, "failed to publish asset saved even")

@@ -15,6 +15,9 @@ import (
 const (
 	MsgTypeGetAnalysisRequest  = "getAnalysisRequest"
 	MsgTypeGetAnalysisResponse = "getAnalysisResponse"
+
+	MsgTypeGetProjectAnalysisRequest  = "getProjectAnalysisRequest"
+	MsgTypeGetProjectAnalysisResponse = "getProjectAnalysisResponse"
 )
 
 type wsServer struct {
@@ -35,6 +38,7 @@ func newWsServer(sdk *jxscouttypes.ModuleSDK, module *astAnalyzerModule) *wsServ
 
 func (s *wsServer) initialize() {
 	s.sdk.WebsocketServer.RegisterHandler(MsgTypeGetAnalysisRequest, s.getAnalysisHandler)
+	s.sdk.WebsocketServer.RegisterHandler(MsgTypeGetProjectAnalysisRequest, s.getProjectAnalysisHandler)
 }
 
 type getAnalysisRequest struct {
@@ -81,7 +85,7 @@ func (s *wsServer) getAnalysis(req getAnalysisRequest) (getAnalysisResponse, err
 	}
 
 	// Trigger analysis
-	analysis, err := s.module.analyzeAsset(*asset)
+	analysis, err := s.module.analyzeAsset(*asset, false)
 	if err != nil {
 		return getAnalysisResponse{}, errutil.Wrap(err, "failed to analyze asset")
 	}
@@ -97,4 +101,43 @@ func (s *wsServer) getAnalysis(req getAnalysisRequest) (getAnalysisResponse, err
 	}
 
 	return response, nil
+}
+
+// getProjectAnalysisResponse is the project-wide (all files) analysis payload.
+type getProjectAnalysisResponse struct {
+	Files []projectFileAnalysis `json:"files"`
+}
+
+type projectFileAnalysis struct {
+	FilePath string               `json:"filePath"`
+	Results  []ASTAnalyzerTreeNode `json:"results"`
+}
+
+func (s *wsServer) getProjectAnalysisHandler(msg jxwebsocket.WebsocketMessage, conn *websocket.Conn) {
+	analyses, err := s.module.repo.getAllASTAnalyses(s.sdk.Ctx)
+	if err != nil {
+		s.sdk.WebsocketServer.SendErrorResponse(conn, msg.ID, MsgTypeGetProjectAnalysisResponse, fmt.Sprintf("failed to get project analyses: %s", err.Error()))
+		return
+	}
+
+	// Group by asset path, format each file's matches into a tree
+	byPath := make(map[string][]ASTAnalyzerTreeNode)
+	var order []string
+	for _, a := range analyses {
+		matches, err := a.GetMatches()
+		if err != nil {
+			continue
+		}
+		if _, ok := byPath[a.AssetPath]; !ok {
+			order = append(order, a.AssetPath)
+		}
+		byPath[a.AssetPath] = append(byPath[a.AssetPath], formatMatchesV1(matches)...)
+	}
+
+	files := make([]projectFileAnalysis, 0, len(order))
+	for _, p := range order {
+		files = append(files, projectFileAnalysis{FilePath: p, Results: byPath[p]})
+	}
+
+	s.sdk.WebsocketServer.SendResponse(conn, msg.ID, MsgTypeGetProjectAnalysisResponse, getProjectAnalysisResponse{Files: files})
 }

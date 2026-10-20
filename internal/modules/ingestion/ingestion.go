@@ -29,6 +29,7 @@ type Request struct {
 	Method  string            `json:"method"`
 	URL     string            `json:"url"`
 	Headers map[string]string `json:"headers"`
+	Body    string            `json:"body,omitempty"`
 }
 
 type Response struct {
@@ -81,6 +82,9 @@ func (m *ingestionModule) handleIngestionCaidoIngestionEndpoint(w http.ResponseW
 }
 
 func (m *ingestionModule) handleIngestionRequest(req IngestionRequest) {
+	// Pro v2 http_request_ingestion: persist raw traffic when configured
+	m.maybeSaveHTTPRequest(&req)
+
 	m.sdk.InMemoryEventBus.Publish(TopicIngestionRequestReceived, eventbus.Message{
 		Data: EventIngestionRequestReceived{
 			IngestionRequest: &req,

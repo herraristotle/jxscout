@@ -7,13 +7,16 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	assetfetcher "github.com/francisconeves97/jxscout/internal/core/asset-fetcher"
 	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
+	"github.com/francisconeves97/jxscout/internal/core/agentskills"
 	"github.com/francisconeves97/jxscout/internal/core/common"
 	"github.com/francisconeves97/jxscout/internal/core/database"
 	dbeventbus "github.com/francisconeves97/jxscout/internal/core/dbeventbus"
@@ -27,8 +30,11 @@ import (
 	"github.com/francisconeves97/jxscout/internal/modules/comparer"
 	customanalyzers "github.com/francisconeves97/jxscout/internal/modules/custom-analyzers"
 	"github.com/francisconeves97/jxscout/internal/modules/differ"
+	findingsmodule "github.com/francisconeves97/jxscout/internal/modules/findings"
 	gitcommiter "github.com/francisconeves97/jxscout/internal/modules/git-committer"
 	htmlingestion "github.com/francisconeves97/jxscout/internal/modules/html-ingestion"
+	hooksmodule "github.com/francisconeves97/jxscout/internal/modules/hooks"
+	monitoringmodule "github.com/francisconeves97/jxscout/internal/modules/monitoring"
 	"github.com/francisconeves97/jxscout/internal/modules/ingestion"
 	jsingestion "github.com/francisconeves97/jxscout/internal/modules/js-ingestion"
 	"github.com/francisconeves97/jxscout/internal/modules/optimizer"
@@ -37,6 +43,7 @@ import (
 	"github.com/francisconeves97/jxscout/internal/modules/screenshot"
 	"github.com/francisconeves97/jxscout/internal/modules/sourcemaps"
 	"github.com/francisconeves97/jxscout/internal/modules/unpacker"
+	"github.com/francisconeves97/jxscout/internal/settings"
 	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
 	"github.com/jmoiron/sqlx"
 
@@ -142,6 +149,23 @@ func initJxscout(options jxscouttypes.Options) (*jxscout, error) {
 
 	logger := initializeLogger(logBuffer, options)
 
+	// Pro v2 agent_skills: auto-generate .agents/skills + .env so AI agents work out of the box
+	if loader := settings.NewSettingsLoader(options.ProjectName); true {
+		if s, err := loader.LoadSettings(); err == nil {
+			enabled := true
+			if v, ok := s.GetBool("agent_skills.enabled"); ok {
+				enabled = v
+			}
+			folderName := ".agents"
+			if v, ok := s.GetString("agent_skills.agents_folder_name"); ok && v != "" {
+				folderName = v
+			}
+			if err := agentskills.Initialize(options.ProjectName, enabled, folderName); err != nil {
+				logger.Warn("failed to initialize agent skills", "error", err)
+			}
+		}
+	}
+
 	scopeRegex := initializeScope(options.ScopePatterns)
 
 	scopeChecker := newScopeChecker(scopeRegex, logger)
@@ -234,6 +258,9 @@ func (s *jxscout) registerCoreModules() {
 		reporter.NewReporterModule(),
 		differ.NewDifferModule(),
 		comparer.NewComparerModule(),
+		findingsmodule.NewFindingsModule(),
+		hooksmodule.NewHooksModule(),
+		monitoringmodule.NewMonitoringModule(),
 	}
 
 	for _, module := range coreModules {
@@ -261,9 +288,28 @@ func (s *jxscout) Start() error {
 		return errutil.Wrap(err, "failed to start server")
 	}
 
+	// Headless (no usable TTY): block until context cancelled instead of launching the TUI
+	if !hasTTY() {
+		s.log.Info("no TTY detected, running headless (press Ctrl+C to stop)")
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+		<-sigChan
+		return s.Stop()
+	}
+
 	s.runPrompt()
 
 	return nil
+}
+
+// hasTTY reports whether a real controlling terminal is available for the TUI
+func hasTTY() bool {
+	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return false
+	}
+	f.Close()
+	return true
 }
 
 func (s *jxscout) start() error {

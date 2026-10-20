@@ -5,6 +5,33 @@ All notable changes to JXScout will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Pro v2 hook system (strictly v2, no v1 compatibility): 9 events
+  (`js_file_saved`, `js_file_updated`, `js_file_beautified`, `html_file_saved`,
+  `html_file_updated`, `html_file_beautified`, `reversed_source_map_file_saved`,
+  `matches_created`, `finding_created`) configured in `settings.jsonc` under
+  `hooks` as `event -> process -> {script, concurrency}`; scripts receive
+  event-specific JSON payloads on stdin with `$JXSCOUT_PROJECT_DIR` expansion
+- Structured findings feature (Pro v2): `findings` table, REST API
+  (`POST/GET /findings`), CLI commands `create-finding` and `list-findings`
+  with severity/kind filtering and `kind`+`dedup-key` deduplication; creates
+  publish the `finding_created` hook event
+- Auto-creation of project `settings.jsonc` (with documented v2 hooks template),
+  `settings.schema.json`, and global settings on first run — new systems need
+  no manual config file setup
+- Headless mode: without a TTY the proxy runs in background and blocks on
+  SIGTERM/SIGINT with graceful shutdown (previously exited immediately)
+
+### Changed
+- Default server port moved to 3333 (avoid Windows host port 8080 conflicts)
+- Hooks module subscribes via the durable DB event bus (in-memory subscription
+  never received asset/beautifier/analysis events)
+- Asset content updates propagate an `updated` flag through
+  asset-saved → beautifier → analyzer, firing `*_updated` events and forcing
+  match re-analysis
+
 ## [1.0.0-oss] - 2026-10-19
 
 ### Added

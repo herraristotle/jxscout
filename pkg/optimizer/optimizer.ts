@@ -96,9 +96,19 @@ function tryParseJSON(node: any, ctx: StringInlinerContext): any | null {
   return null;
 }
 
-function optimizeCode(source: string): { content: string; changes: number } {
+type TransformerName = "json_parse" | "variable_inliner" | "string_concat";
+
+const ALL_TRANSFORMERS: TransformerName[] = ["json_parse", "variable_inliner", "string_concat"];
+
+function optimizeCode(
+  source: string,
+  transformers: Set<string> = new Set(ALL_TRANSFORMERS),
+): { content: string; changes: number } {
   const ctx = createInlinerContext();
   let changes = 0;
+  const wantInliner = transformers.has("variable_inliner");
+  const wantConcat = transformers.has("string_concat");
+  const wantJSON = transformers.has("json_parse");
 
   let parsed: ParseResult;
   try {
@@ -113,58 +123,77 @@ function optimizeCode(source: string): { content: string; changes: number } {
 
   const lines = source.split("\n");
 
-  // First pass: collect constant declarations
-  traverse(parsed.program, {
-    VariableDeclaration(node) {
-      trackDeclaration(node, ctx);
-    },
-    VariableDeclarator(node) {
-      trackDeclaration(node, ctx);
-    },
-  });
+  // estree-toolkit visitors receive a NodePath; use path.node for the raw AST node.
+  // oxc nodes carry char offsets on node.start / node.end.
+  const offset = (n: any): { start: number; end: number } | null =>
+    typeof n?.start === "number" && typeof n?.end === "number"
+      ? { start: n.start, end: n.end }
+      : null;
+
+  // First pass: collect constant declarations (needed by inliner and concat)
+  if (wantInliner || wantConcat) {
+    traverse(parsed.program, {
+      VariableDeclaration(path: any) {
+        trackDeclaration(path.node, ctx);
+      },
+    });
+  }
 
   // Second pass: replace identifiers and expressions
   const mutations: Array<{ start: number; end: number; replacement: string }> = [];
 
   traverse(parsed.program, {
-    Identifier(node) {
-      // Skip if it's part of a declaration (left-hand side)
-      if (node.parent?.type === "VariableDeclarator" && node.parent.id === node) return;
-      if (node.parent?.type === "FunctionDeclaration" && node.parent.id === node) return;
-      if (node.parent?.type === "FunctionExpression" && node.parent.id === node) return;
-      if (node.parent?.type === "ArrowFunctionExpression" && node.parent.id === node) return;
+    Identifier(path: any) {
+      const node = path.node;
+      const parent = path.parentPath?.node;
 
+      // Skip if it's part of a declaration (left-hand side) or function name
+      if (parent?.type === "VariableDeclarator" && parent.id === node) return;
+      if (parent?.type === "FunctionDeclaration" && parent.id === node) return;
+      if (parent?.type === "FunctionExpression" && parent.id === node) return;
+      if (parent?.type === "ArrowFunctionExpression" && parent.id === node) return;
+      // Skip object property keys and member property names (non-computed)
+      if (parent?.type === "MemberExpression" && parent.property === node && !parent.computed) return;
+      if ((parent?.type === "Property" || parent?.type === "PropertyDefinition") && parent.key === node && !parent.computed) return;
+
+      if (!wantInliner) return;
       const value = ctx.constants.get(node.name);
-      if (value !== null && node.loc) {
+      const range = offset(node);
+      if (value != null && range) {
         mutations.push({
-          start: node.loc.start,
-          end: node.loc.end,
+          start: range.start,
+          end: range.end,
           replacement: JSON.stringify(value),
         });
         changes++;
       }
     },
-    BinaryExpression(node) {
-      if (node.operator === "+" && node.loc) {
+    BinaryExpression(path: any) {
+      if (!wantConcat) return;
+      const node = path.node;
+      const range = offset(node);
+      if (node.operator === "+" && range) {
         const value = resolveToString(node, ctx);
         if (value !== null) {
           mutations.push({
-            start: node.loc.start,
-            end: node.loc.end,
+            start: range.start,
+            end: range.end,
             replacement: JSON.stringify(value),
           });
           changes++;
         }
       }
     },
-    CallExpression(node) {
-      // JSON.parse evaluation
-      if (tryParseJSON(node, ctx) !== null && node.loc) {
+    CallExpression(path: any) {
+      if (!wantJSON) return;
+      const node = path.node;
+      const range = offset(node);
+      if (tryParseJSON(node, ctx) !== null && range) {
         const jsonResult = tryParseJSON(node, ctx);
         if (jsonResult !== null) {
           mutations.push({
-            start: node.loc.start,
-            end: node.loc.end,
+            start: range.start,
+            end: range.end,
             replacement: JSON.stringify(jsonResult),
           });
           changes++;
@@ -173,11 +202,21 @@ function optimizeCode(source: string): { content: string; changes: number } {
     },
   });
 
-  // Apply mutations in reverse order to preserve positions
-  mutations.sort((a, b) => b.start - a.start);
+  // Drop nested/overlapping mutations (prefer outer, larger ranges) and
+  // apply in reverse order to preserve positions.
+  mutations.sort((a, b) => a.start - b.start || b.end - a.end);
+  const applicable: typeof mutations = [];
+  let lastEnd = -1;
+  for (const mut of mutations) {
+    if (mut.start >= lastEnd) {
+      applicable.push(mut);
+      lastEnd = mut.end;
+    }
+  }
+  applicable.sort((a, b) => b.start - a.start);
 
   let optimized = source;
-  for (const mut of mutations) {
+  for (const mut of applicable) {
     optimized = optimized.slice(0, mut.start) + mut.replacement + optimized.slice(mut.end);
   }
 
@@ -187,17 +226,33 @@ function optimizeCode(source: string): { content: string; changes: number } {
 function main() {
   const args = process.argv.slice(2);
   if (args.length < 1) {
-    console.error("Usage: optimizer.ts <filepath>");
+    console.error("Usage: optimizer.ts <filepath> [transformers_csv] [iterations]");
     process.exit(1);
   }
 
   const filePath = args[0];
-  const source = require("fs").readFileSync(filePath, "utf-8");
-  const result = optimizeCode(source);
+  // transformers: comma list or env; default = all three (json_parse, variable_inliner, string_concat)
+  const transformersArg = args[1] || process.env.OPTIMIZER_TRANSFORMERS || ALL_TRANSFORMERS.join(",");
+  const transformers = new Set(
+    transformersArg.split(",").map((t) => t.trim()).filter((t) => t.length > 0),
+  );
+  const iterations = Math.max(1, parseInt(args[2] || process.env.OPTIMIZER_ITERATIONS || "1", 10) || 1);
+
+  const fs = require("fs");
+  let source = fs.readFileSync(filePath, "utf-8");
+  let totalChanges = 0;
+
+  // Pro v2 beautifier.transformations.iterations: re-run until stable or cap reached
+  for (let i = 0; i < iterations; i++) {
+    const result = optimizeCode(source, transformers);
+    totalChanges += result.changes;
+    if (result.changes === 0) break;
+    source = result.content;
+  }
 
   console.log(JSON.stringify({
-    optimized_content: result.content,
-    changes: result.changes,
+    optimized_content: source,
+    changes: totalChanges,
   }));
 }
 
