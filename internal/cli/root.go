@@ -34,7 +34,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "jxscout-cli",
+	Use:   "jxscout",
 	Short: "JXScout headless CLI utilities",
 	Long:  "Headless command-line utilities for querying JXScout data without running the proxy server",
 }
@@ -58,7 +58,13 @@ func RegisterCommands(parent *cobra.Command) {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&projectName, "project", "p", "default", "project name")
+	// Agent skills run `jxscout-pro-v2 -c ...` without --project; project comes
+	// from the env var written into <project>/.env (Pro v2 contract).
+	projectDefault := os.Getenv("JXSCOUT_PROJECT_NAME")
+	if projectDefault == "" {
+		projectDefault = "default"
+	}
+	rootCmd.PersistentFlags().StringVarP(&projectName, "project", "p", projectDefault, "project name")
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "output format (text, json)")
 }
 
@@ -969,9 +975,9 @@ func runRepeater(cmd *cobra.Command, args []string) error {
 		if line == "" {
 			continue
 		}
-		hname, _, _ := strings.Cut(line, ":")
+		hname, hval, _ := strings.Cut(line, ":")
 		if strings.EqualFold(strings.TrimSpace(hname), "host") && host == "" {
-			host = strings.TrimSpace(strings.TrimPrefix(line, hname))
+			host = strings.TrimSpace(hval)
 		}
 		if strings.EqualFold(strings.TrimSpace(hname), "content-length") {
 			continue // recomputed below
