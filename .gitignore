@@ -4,3 +4,7 @@ dist
 extracted
 .DS_Store
 .cursor
+jxscout
+jxscout-cli
+jxscout-mcp
+jxscout.exe
