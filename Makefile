@@ -6,12 +6,6 @@ install:
 clean:
 	rm -rf dist/
 
-# Single consolidated binary. jxscout-pro-v2 alias keeps upstream agent skills
-# (which invoke `jxscout-pro-v2 -c ...`) working without modification.
-go-build:
-	go build -o jxscout ./cmd/jxscout
-	ln -sf jxscout jxscout-pro-v2
-
 build:
 	bun run rsbuild build
 	mv dist/sourceMaps.js internal/modules/sourcemaps/sourcemaps.js

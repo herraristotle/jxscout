@@ -18,7 +18,7 @@ When creating a finding from or related to a file, include the file path in the 
 From the project root:
 
 ```bash
-jxscout-pro-v2 -c create-finding --kind <kind> --severity <severity> [options]
+jxscout -c create-finding --kind <kind> --severity <severity> [options]
 ```
 
 **Project name**: Do not pass `--project-name` unless the user explicitly specifies it. The project is taken from the environment (e.g. env var). If the project name is unknown and the user did not specify it, ask the user for it before running.
@@ -36,15 +36,15 @@ jxscout-pro-v2 -c create-finding --kind <kind> --severity <severity> [options]
 ## Examples
 
 ```bash
-jxscout-pro-v2 -c create-finding --kind idor --severity high --description "User can access other users' coupons" --dedup-key "GET /coupons?id"
+jxscout -c create-finding --kind idor --severity high --description "User can access other users' coupons" --dedup-key "GET /coupons?id"
 ```
 
 ```bash
-jxscout-pro-v2 -c create-finding --kind vulnerability --severity critical --description "SQL injection in search" --dedup-key "search" --metadata '{"endpoint":"/api/search","param":"q"}'
+jxscout -c create-finding --kind vulnerability --severity critical --description "SQL injection in search" --dedup-key "search" --metadata '{"endpoint":"/api/search","param":"q"}'
 ```
 
 ```bash
-jxscout-pro-v2 -c create-finding --kind secret --severity high --description "Hardcoded API key in config" --dedup-key "config-api-key" --metadata '{"file_path":"repeater/stack_trace_leak_respuestas_rapidas/original.res"}'
+jxscout -c create-finding --kind secret --severity high --description "Hardcoded API key in config" --dedup-key "config-api-key" --metadata '{"file_path":"repeater/stack_trace_leak_respuestas_rapidas/original.res"}'
 ```
 
 ## Output

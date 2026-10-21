@@ -22,7 +22,7 @@ const Version = constants.Version
 
 func main() {
 	// Pro v2 client-mode compatibility: `jxscout -c <command> [flags]`
-	// (upstream skills invoke `jxscout-pro-v2 -c create-finding ...` etc.)
+	// (agent skills invoke `jxscout -c create-finding ...` etc.)
 	if len(os.Args) > 2 && os.Args[1] == "-c" {
 		os.Args = append([]string{os.Args[0], os.Args[2]}, os.Args[3:]...)
 	}

@@ -78,7 +78,7 @@ For each sensitive parameter identified, apply these in order. Compare responses
 - **Create a finding** with kind `potential-idor`, referencing the request:
 
 ```bash
-jxscout-pro-v2 -c create-finding --kind potential-idor --severity <low|medium|high> --description "<Short description: what was changed and what was observed>" --dedup-key "<endpoint_or_file>-<param>-<technique>" --metadata '{"file_path":"<path_to_req_file>","param":"<param_name>","technique":"<substitution|duplicate_param|array|path_traversal>"}'
+jxscout -c create-finding --kind potential-idor --severity <low|medium|high> --description "<Short description: what was changed and what was observed>" --dedup-key "<endpoint_or_file>-<param>-<technique>" --metadata '{"file_path":"<path_to_req_file>","param":"<param_name>","technique":"<substitution|duplicate_param|array|path_traversal>"}'
 ```
 
 - Add the finding to your in-memory list for `notes.txt`.

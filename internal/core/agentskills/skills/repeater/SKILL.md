@@ -16,7 +16,7 @@ description: Sends raw HTTP from .req files via jxscout repeater and inspects re
 From the project root:
 
 ```bash
-jxscout-pro-v2 -c repeater <req_file>
+jxscout -c repeater <req_file>
 ```
 
 `<req_file>` is the path to a file containing a single raw HTTP request (method, path, headers, blank line, optional body). The file extension does not need to be `.req`.
@@ -48,7 +48,7 @@ IMPORTANT:
 ## Workflow for security research
 
 1. Start from an existing .req in `repeater/` (e.g. `repeater/sql_injection/original.req`). If the .req is elsewhere, first create a task folder under `repeater/`, copy the file there as `original.req`, then use that path.
-2. Run: `jxscout-pro-v2 -c repeater <req_file>` on the original request file to save the original response.
+2. Run: `jxscout -c repeater <req_file>` on the original request file to save the original response.
 3. Check stdout and/or the new .res file for status, headers, and body.
 4. Edit the original .req depending on your goal.
 5. Re-run the same command with the same (modified) file.
