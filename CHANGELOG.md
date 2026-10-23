@@ -23,9 +23,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no manual config file setup
 - Headless mode: without a TTY the proxy runs in background and blocks on
   SIGTERM/SIGINT with graceful shutdown (previously exited immediately)
+- MCP server: `resources/list` + `resources/read` (`jxscout://<project>/<path>`,
+  symlink-escape checked) and a `triage-asset` prompt with `prompts/list` /
+  `prompts/get`
+- MCP HTTP auth: `MCP_AUTH_TOKEN` enables constant-time bearer checks; a
+  non-loopback bind is refused without a token
+- `http_request_ingestion`: raw request/response files persisted under
+  `http_requests/` when configured; `Authorization`, `Cookie`, `Set-Cookie`,
+  `X-Api-Key`, `X-Auth-Token`, `X-Csrf-Token` and `Proxy-Authorization` are
+  redacted before write
+- Wordlist generation for `secrets` and `params` via MCP (previously advertised
+  in the tool schema but unimplemented)
+- PDF report output is a real PDF (`%PDF-1.4`, base-14 Helvetica, paginated)
+  instead of a `.txt` file named `pdf`
+- Chunk discoverer: entry bundles that only ship the webpack runtime are now
+  handled via the `__webpack_require__.u` filename template (7.js fixture gains
+  chunks it previously missed)
+
+### Security
+- Hooks execute scripts as parsed argv against an allowlist instead of
+  `sh -c` / `powershell -Command` (command injection)
+- `fs-ingest` resolves symlinks and rejects writes outside the ingest root
+- Asset fetcher refuses link-local dial targets (`169.254.0.0/16`, `fe80::/10`,
+  `::`), blocking cloud metadata SSRF; loopback and RFC1918 stay allowed
+- MCP tool handlers validate project names before joining them into paths
+
+### Fixed
+- Chunk discovery on multi-MB bundles: absent fingerprints are skipped by a
+  string pre-check and the chunk-builder index is cached per AST, cutting the
+  6 MB fixture from ~27 s to ~8 s
+- `isLikelyJavaScript` no longer classifies prose such as "Please let us know"
+  as JavaScript (variable-declaration pattern now requires `=` or `;`)
+- Findings view renders its "No findings yet" empty state instead of dropping it
+- Event bus logs an already-removed subscriber instead of panicking
 
 ### Changed
 - Default server port moved to 3333 (avoid Windows host port 8080 conflicts)
+- `MCP_SERVER.md` and `claude_desktop_config.json` point at `jxscout mcp`
+  (there is no `cmd/jxscout-mcp` build target)
 - Hooks module subscribes via the durable DB event bus (in-memory subscription
   never received asset/beautifier/analysis events)
 - Asset content updates propagate an `updated` flag through

@@ -33,6 +33,22 @@ The first step to get up and running with jxscout is to install the CLI. To do t
 go install github.com/francisconeves97/jxscout/cmd/jxscout@latest
 ```
 
+Or use the install script, which downloads the right release archive for your
+platform and verifies its SHA-256 checksum:
+
+```bash
+# Linux / macOS — installs to ~/.local/bin (override: JXSCOUT_INSTALL_DIR)
+curl -fsSL https://github.com/francisconeves97/jxscout/releases/latest/download/install.sh | sh
+```
+
+```powershell
+# Windows — installs to %LOCALAPPDATA%\jxscout\bin and updates the user PATH
+irm https://raw.githubusercontent.com/francisconeves97/jxscout/main/install.ps1 | iex
+```
+
+Pin a version with `JXSCOUT_VERSION=1.2.3` (or `$env:JXSCOUT_VERSION`) and point
+the script at a mirror with `JXSCOUT_BASE_URL`.
+
 ![jxscout](docs/jxscout.png)
 
 The jxscout CLI has a prompt with many commands, one of them is `install` which installs `bun` and `prettier`, which are needed dependencies of jxscout. If you don't have those tools installed, feel free to install them manually or by running the `install` command.
@@ -209,6 +225,54 @@ OVERRIDES CONFIGURATION:
    -caido-port int                         port where Caido is running (default 8080)
    -override-content-check-interval value  interval at which to check for changes in override content and update match/replace rules (default 5s)
 ```
+
+## CLI Subcommands
+
+Besides the interactive prompt, `jxscout` ships standalone subcommands for scripting and for AI agents:
+
+```bash
+jxscout wordlist --type paths|secrets|params|packages|all [-o json]
+jxscout query                          # export assets/findings/descriptors as JSON
+jxscout fs-ingest <path>               # ingest local files/folders into the project
+jxscout backup [output-file]           # archive the project
+jxscout create-finding --kind <k> --severity <s> --description <d> [--dedup-key <k>] [--metadata <json>]
+jxscout list-findings [--severity <s>] [--kind <k>]
+jxscout print-full-project-settings    # show merged settings
+jxscout repeater <req_file>            # replay a saved request with variations
+jxscout monitor create|list|send-test-notifications
+jxscout mcp [--http] [--hostname <h>] [--port <p>]
+```
+
+`jxscout -c <command>` is accepted as an alias for `jxscout <command>` (used by the agent skills).
+
+## MCP Server
+
+`jxscout mcp` speaks JSON-RPC 2.0 / MCP **2026-07-28** (the stateless revision) on stdio (default) or HTTP. No `initialize` handshake: version travels per request.
+It exposes 5 tools (`jxscout_list_projects`, `jxscout_list_assets`, `jxscout_get_asset`,
+`jxscout_get_descriptors`, `jxscout_generate_wordlist`), project resources
+(`jxscout://<project>/<asset path>`) and a `triage-asset` prompt.
+
+HTTP mode binds loopback and needs no auth; set `MCP_AUTH_TOKEN` to require
+`Authorization: Bearer <token>`. A non-loopback bind is refused without a token.
+See [MCP_SERVER.md](./MCP_SERVER.md).
+
+## Agent Skills
+
+On first run jxscout writes agent skill definitions to
+`<project>/.agents/skills/` plus a `.env` with `JXSCOUT_PROJECT_NAME`, so
+Claude Code / Cursor can drive the CLI directly. Disable or rename the folder
+under `agent_skills` in `settings.jsonc`.
+
+## Configuration Files
+
+Settings are merged from three tiers, highest priority last:
+
+1. global — `~/.jxscout/global_settings.jsonc`
+2. shared — `~/.jxscout/shared_project_settings.jsonc`
+3. project — `~/.jxscout/<project>/settings.jsonc` (auto-created, highest priority)
+
+Each project also gets a `settings.schema.json` used for validation. Invalid
+values are reported and fall back to defaults rather than aborting startup.
 
 ## Contributing
 

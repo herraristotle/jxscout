@@ -161,6 +161,25 @@ func globMatch(pattern, value string) bool {
 	return err == nil && ok
 }
 
+// redactedHeaders are masked before raw traffic hits disk. Files are meant to
+// be read by AI agents and shared, so credentials must not survive.
+var redactedHeaders = map[string]bool{
+	"authorization": true,
+	"cookie":        true,
+	"set-cookie":    true,
+	"proxy-authorization": true,
+	"x-api-key":     true,
+	"x-auth-token":  true,
+	"x-csrf-token":  true,
+}
+
+func redactHeader(name, value string) string {
+	if redactedHeaders[strings.ToLower(name)] {
+		return "[REDACTED]"
+	}
+	return value
+}
+
 func renderRawRequest(req *IngestionRequest, u *url.URL) string {
 	var b strings.Builder
 	path := u.RequestURI()
@@ -173,7 +192,7 @@ func renderRawRequest(req *IngestionRequest, u *url.URL) string {
 		if strings.EqualFold(k, "Host") || strings.EqualFold(k, "Content-Length") {
 			continue
 		}
-		fmt.Fprintf(&b, "%s: %s\n", k, v)
+		fmt.Fprintf(&b, "%s: %s\n", k, redactHeader(k, v))
 	}
 	b.WriteString("\n")
 	b.WriteString(req.Response.Body) // note: body echoed for agent context; request bodies are not proxied back by /ingest
@@ -184,7 +203,7 @@ func renderRawResponse(req *IngestionRequest) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "HTTP/1.1 %d\n", req.Response.Status)
 	for k, v := range req.Response.Headers {
-		fmt.Fprintf(&b, "%s: %s\n", k, v)
+		fmt.Fprintf(&b, "%s: %s\n", k, redactHeader(k, v))
 	}
 	b.WriteString("\n")
 	b.WriteString(req.Response.Body)

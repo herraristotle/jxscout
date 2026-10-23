@@ -1,6 +1,7 @@
 package htmlingestion
 
 import (
+	"log/slog"
 	"net/url"
 	"strings"
 
@@ -15,7 +16,7 @@ type extractedJS struct {
 	inlineScripts []string // actual scripts that were inlined
 }
 
-func extractJS(htmlContent string, baseURLRaw string) (extractedJS, error) {
+func extractJS(htmlContent string, baseURLRaw string, log *slog.Logger) (extractedJS, error) {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
 	if err != nil {
 		return extractedJS{}, errutil.Wrap(err, "failed to read document")
@@ -26,7 +27,7 @@ func extractJS(htmlContent string, baseURLRaw string) (extractedJS, error) {
 		return extractedJS{}, errutil.Wrap(err, "failed to parse url")
 	}
 
-	scriptURLs := extractJavascriptURLs(doc, baseURL)
+	scriptURLs := extractJavascriptURLs(doc, baseURL, log)
 	inlineScripts := extractInlineJavascript(doc)
 
 	return extractedJS{
@@ -35,7 +36,7 @@ func extractJS(htmlContent string, baseURLRaw string) (extractedJS, error) {
 	}, nil
 }
 
-func extractJavascriptURLs(doc *goquery.Document, baseURL *url.URL) []string {
+func extractJavascriptURLs(doc *goquery.Document, baseURL *url.URL, log *slog.Logger) []string {
 	urls := []string{}
 
 	basePath := ""
@@ -59,7 +60,8 @@ func extractJavascriptURLs(doc *goquery.Document, baseURL *url.URL) []string {
 		if common.IsRelativePath(src) {
 			path, err := url.JoinPath(basePath, src)
 			if err != nil {
-				return // TODO: improve error observability
+				log.Warn("skipping script with unjoinable relative src", "src", src, "base", basePath, "error", err)
+				return
 			}
 
 			url := &url.URL{
@@ -72,7 +74,8 @@ func extractJavascriptURLs(doc *goquery.Document, baseURL *url.URL) []string {
 		} else {
 			parsedURl, err := url.Parse(src)
 			if err != nil {
-				return // TODO: improve error observability
+				log.Warn("skipping script with unparsable src", "src", src, "error", err)
+				return
 			}
 
 			if parsedURl.Scheme == "" {

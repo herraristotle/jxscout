@@ -8,3 +8,6 @@ jxscout
 jxscout-cli
 jxscout-mcp
 jxscout.exe
+
+# sqlite WAL artifacts from dbeventbus tests
+internal/core/dbeventbus/testdb*

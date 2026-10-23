@@ -6,304 +6,220 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
+// findNodeByLabel walks the tree looking for a node with the given label.
+func findNodeByLabel(nodes []ASTAnalyzerTreeNode, label string) *ASTAnalyzerTreeNode {
+	for i := range nodes {
+		if nodes[i].Label == label {
+			return &nodes[i]
+		}
+		if found := findNodeByLabel(nodes[i].Children, label); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+func collectMatchValues(nodes []ASTAnalyzerTreeNode) []string {
+	values := []string{}
+	var walk func(ns []ASTAnalyzerTreeNode)
+	walk = func(ns []ASTAnalyzerTreeNode) {
+		for _, n := range ns {
+			if n.Type == ASTAnalyzerTreeNodeTypeMatch {
+				if m, ok := n.Data.(AnalyzerMatch); ok {
+					values = append(values, m.Value)
+				} else {
+					values = append(values, n.Label)
+				}
+			}
+			walk(n.Children)
+		}
+	}
+	walk(nodes)
+	return values
+}
+
+func countMatchNodes(nodes []ASTAnalyzerTreeNode) int {
+	count := 0
+	for _, n := range nodes {
+		if n.Type == ASTAnalyzerTreeNodeTypeMatch {
+			count++
+		}
+		count += countMatchNodes(n.Children)
+	}
+	return count
+}
+
+// TestFormatMatchesV1 asserts that each match lands in the navigation path the
+// v2 descriptors tree defines, instead of deep-equalling the whole tree (which
+// made the test brittle against icon/description changes).
 func TestFormatMatchesV1(t *testing.T) {
 	tests := []struct {
-		name     string
-		matches  []AnalyzerMatch
-		expected []ASTAnalyzerTreeNode
+		name        string
+		match       AnalyzerMatch
+		path        []string
+		rootLabel   string
 	}{
 		{
-			name:     "empty matches returns empty list",
-			matches:  []AnalyzerMatch{},
-			expected: []ASTAnalyzerTreeNode{},
+			name:      "api path match",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "/api/users", Tags: map[string]bool{"api": true}},
+			rootLabel: "Data",
+			path:      []string{"Data", "Paths", "API"},
 		},
 		{
-			name: "single path match",
-			matches: []AnalyzerMatch{
-				{
-					FilePath:     "test.go",
-					AnalyzerName: "test",
-					Value:        "/api/users",
-					Tags:         map[string]bool{"paths": true},
-				},
-			},
-			expected: []ASTAnalyzerTreeNode{
-				{
-					Label:    "Data",
-					IconName: "folder",
-					Type:     ASTAnalyzerTreeNodeTypeNavigation,
-					Children: []ASTAnalyzerTreeNode{
-						{
-							Label:    "Paths",
-							IconName: "folder",
-							Type:     ASTAnalyzerTreeNodeTypeNavigation,
-							Children: []ASTAnalyzerTreeNode{
-								{
-									Type:        ASTAnalyzerTreeNodeTypeMatch,
-									Label:       "/api/users",
-									Description: "test.go",
-									Data: AnalyzerMatch{
-										FilePath:     "test.go",
-										AnalyzerName: "test",
-										Value:        "/api/users",
-										Tags:         map[string]bool{"paths": true},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:      "is-url path match",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "https://example.com", Tags: map[string]bool{"is-url": true}},
+			rootLabel: "Data",
+			path:      []string{"Data", "Paths", "URL Paths"},
 		},
 		{
-			name: "extension with other tag",
-			matches: []AnalyzerMatch{
-				{
-					FilePath:     "test.go",
-					AnalyzerName: "test",
-					Value:        "asd.js",
-					Tags:         map[string]bool{"extension": true, "js": true},
-				},
-			},
-			expected: []ASTAnalyzerTreeNode{
-				{
-					Label:    "Data",
-					IconName: "folder",
-					Type:     ASTAnalyzerTreeNodeTypeNavigation,
-					Children: []ASTAnalyzerTreeNode{
-						{
-							Label:    "Extension",
-							IconName: "folder",
-							Type:     ASTAnalyzerTreeNodeTypeNavigation,
-							Children: []ASTAnalyzerTreeNode{
-								{
-									Label:    "Js",
-									IconName: "folder",
-									Type:     ASTAnalyzerTreeNodeTypeNavigation,
-									Children: []ASTAnalyzerTreeNode{
-										{
-											Type:        ASTAnalyzerTreeNodeTypeMatch,
-											Label:       "asd.js",
-											Description: "test.go",
-											Data: AnalyzerMatch{
-												FilePath:     "test.go",
-												AnalyzerName: "test",
-												Value:        "asd.js",
-												Tags:         map[string]bool{"extension": true, "js": true},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:      "extension with other tag",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "asd.js", Tags: map[string]bool{"is-extension": true, "extension-js": true}},
+			rootLabel: "Data",
+			path:      []string{"Data", "Extensions"},
 		},
 		{
-			name: "iframe communication",
-			matches: []AnalyzerMatch{
-				{
-					FilePath:     "test.go",
-					AnalyzerName: "test",
-					Value:        "window.postMessage",
-					Tags:         map[string]bool{"post-message": true},
-				},
-			},
-			expected: []ASTAnalyzerTreeNode{
-				{
-					Label:    "Iframe Communication",
-					IconName: "folder",
-					Type:     ASTAnalyzerTreeNodeTypeNavigation,
-					Children: []ASTAnalyzerTreeNode{
-						{
-							Label:    "Post Message",
-							IconName: "folder",
-							Type:     ASTAnalyzerTreeNodeTypeNavigation,
-							Children: []ASTAnalyzerTreeNode{
-								{
-									Type:        ASTAnalyzerTreeNodeTypeMatch,
-									Label:       "window.postMessage",
-									Description: "test.go",
-									Data: AnalyzerMatch{
-										FilePath:     "test.go",
-										AnalyzerName: "test",
-										Value:        "window.postMessage",
-										Tags:         map[string]bool{"post-message": true},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:      "regex match",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "regex.test('x')", Tags: map[string]bool{"regex-match": true}},
+			rootLabel: "Data",
+			path:      []string{"Data", "Regex", "Regex Match"},
 		},
 		{
-			name: "storage manipulation",
-			matches: []AnalyzerMatch{
-				{
-					FilePath:     "test.go",
-					AnalyzerName: "test",
-					Value:        "document.cookie",
-					Tags:         map[string]bool{"cookie-manipulation": true},
-				},
-			},
-			expected: []ASTAnalyzerTreeNode{
-				{
-					Label:    "Storage",
-					IconName: "folder",
-					Type:     ASTAnalyzerTreeNodeTypeNavigation,
-					Children: []ASTAnalyzerTreeNode{
-						{
-							Label:    "Cookie Manipulation",
-							IconName: "folder",
-							Type:     ASTAnalyzerTreeNodeTypeNavigation,
-							Children: []ASTAnalyzerTreeNode{
-								{
-									Type:        ASTAnalyzerTreeNodeTypeMatch,
-									Label:       "document.cookie",
-									Description: "test.go",
-									Data: AnalyzerMatch{
-										FilePath:     "test.go",
-										AnalyzerName: "test",
-										Value:        "document.cookie",
-										Tags:         map[string]bool{"cookie-manipulation": true},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:      "secret",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "sk_live_abc", Tags: map[string]bool{"secret": true, "secret-type-stripe": true}},
+			rootLabel: "Data",
+			path:      []string{"Data", "Secrets"},
 		},
 		{
-			name: "behavior with misc",
-			matches: []AnalyzerMatch{
-				{
-					FilePath:     "test.go",
-					AnalyzerName: "test",
-					Value:        "window.location.hash",
-					Tags:         map[string]bool{"hash-change": true},
-				},
-				{
-					FilePath:     "test.go",
-					AnalyzerName: "test",
-					Value:        "document.write",
-					Tags:         map[string]bool{"dom-xss": true},
-				},
-			},
-			expected: []ASTAnalyzerTreeNode{
-				{
-					Label:    "Behavior",
-					IconName: "folder",
-					Type:     ASTAnalyzerTreeNodeTypeNavigation,
-					Children: []ASTAnalyzerTreeNode{
-						{
-							Label:    "Hash Change",
-							IconName: "folder",
-							Type:     ASTAnalyzerTreeNodeTypeNavigation,
-							Children: []ASTAnalyzerTreeNode{
-								{
-									Type:        ASTAnalyzerTreeNodeTypeMatch,
-									Label:       "window.location.hash",
-									Description: "test.go",
-									Data: AnalyzerMatch{
-										FilePath:     "test.go",
-										AnalyzerName: "test",
-										Value:        "window.location.hash",
-										Tags:         map[string]bool{"hash-change": true},
-									},
-								},
-							},
-						},
-						{
-							Label:    "Misc",
-							IconName: "folder",
-							Type:     ASTAnalyzerTreeNodeTypeNavigation,
-							Children: []ASTAnalyzerTreeNode{
-								{
-									Type:        ASTAnalyzerTreeNodeTypeMatch,
-									Label:       "document.write",
-									Description: "test.go",
-									Data: AnalyzerMatch{
-										FilePath:     "test.go",
-										AnalyzerName: "test",
-										Value:        "document.write",
-										Tags:         map[string]bool{"dom-xss": true},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			name:      "graphql query",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "query { user }", Tags: map[string]bool{"graphql-query": true}},
+			rootLabel: "Data",
+			path:      []string{"Data", "GraphQL", "Query"},
+		},
+		{
+			name:      "postMessage event",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "window.postMessage('x')", Tags: map[string]bool{"postMessage": true}},
+			rootLabel: "Client Behavior",
+			path:      []string{"Client Behavior", "Events", "postMessage"},
+		},
+		{
+			name:      "cookie manipulation",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "document.cookie = 'a=b'", Tags: map[string]bool{"cookie-manipulation": true}},
+			rootLabel: "Client Behavior",
+			path:      []string{"Client Behavior", "Storage", "Cookie"},
+		},
+		{
+			name:      "localStorage",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "localStorage.getItem('k')", Tags: map[string]bool{"local-storage": true}},
+			rootLabel: "Client Behavior",
+			path:      []string{"Client Behavior", "Storage", "localStorage"},
+		},
+		{
+			name:      "eval",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "eval('1')", Tags: map[string]bool{"eval": true}},
+			rootLabel: "Client Behavior",
+			path:      []string{"Client Behavior", "eval"},
+		},
+		{
+			name:      "onhashchange",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "window.onhashchange", Tags: map[string]bool{"onhashchange": true}},
+			rootLabel: "Client Behavior",
+			path:      []string{"Client Behavior", "Events", "onhashchange"},
+		},
+		{
+			name:      "innerHTML",
+			match:     AnalyzerMatch{FilePath: "test.go", AnalyzerName: "test", Value: "el.innerHTML = 'x'", Tags: map[string]bool{"inner-html": true}},
+			rootLabel: "Client Behavior",
+			path:      []string{"Client Behavior", "innerHTML"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := formatMatchesV1(tt.matches)
-			assert.Equal(t, tt.expected, result)
+			result := formatMatchesV1([]AnalyzerMatch{tt.match})
+
+			require.NotEmpty(t, result, "expected at least one root node")
+
+			// Walk the expected path one level at a time.
+			nodes := result
+			for depth, label := range tt.path {
+				node := findNodeByLabel(nodes, label)
+				require.NotNilf(t, node, "missing node %q at depth %d (%v)", label, depth, tt.path)
+				nodes = node.Children
+			}
+
+			assert.Equal(t, []string{tt.match.Value}, collectMatchValues(nodes))
 		})
 	}
 }
 
+func TestFormatMatchesV1Empty(t *testing.T) {
+	result := formatMatchesV1([]AnalyzerMatch{})
+	assert.Empty(t, result)
+	assert.Equal(t, 0, countMatchNodes(result))
+}
+
+func TestFormatMatchesV1UnknownTagsIgnored(t *testing.T) {
+	result := formatMatchesV1([]AnalyzerMatch{
+		{FilePath: "test.go", AnalyzerName: "test", Value: "whatever", Tags: map[string]bool{"not-a-known-tag": true}},
+	})
+	assert.Empty(t, result)
+}
+
 func TestFormatMatchesV1WithExampleData(t *testing.T) {
-	// Read the matches.json file
 	matchesJSON, err := os.ReadFile("example/matches.json")
-	if err != nil {
-		t.Fatalf("Failed to read matches.json: %v", err)
-	}
+	require.NoError(t, err, "failed to read matches.json")
 
 	var matches []AnalyzerMatch
-	if err := json.Unmarshal(matchesJSON, &matches); err != nil {
-		t.Fatalf("Failed to unmarshal matches.json: %v", err)
-	}
+	require.NoError(t, json.Unmarshal(matchesJSON, &matches), "failed to unmarshal matches.json")
 
-	// Format the matches
 	result := formatMatchesV1(matches)
+	require.NotNil(t, result)
+	require.NotEmpty(t, result)
 
-	// Basic validation of the result
-	assert.NotNil(t, result)
-	assert.NotEmpty(t, result)
-
-	// Verify that all matches were processed
-	totalMatches := 0
-	var countMatches func(node ASTAnalyzerTreeNode)
-	countMatches = func(node ASTAnalyzerTreeNode) {
-		if node.Type == ASTAnalyzerTreeNodeTypeMatch {
-			totalMatches++
-		}
-		for _, child := range node.Children {
-			countMatches(child)
-		}
-	}
-	for _, rootNode := range result {
-		countMatches(rootNode)
+	// Every match must be placed at least once; matches whose only tags are
+	// outside the descriptor taxonomy (e.g. dom-xss) are intentionally dropped,
+	// so assert the recognized ones are all present.
+	placedValues := collectMatchValues(result)
+	placed := make(map[string]bool, len(placedValues))
+	for _, v := range placedValues {
+		placed[v] = true
 	}
 
-	assert.Equal(t, 30, totalMatches, "Expected 30 matches in the result")
-
-	// Verify specific categories exist
-	categories := make(map[string]bool)
-	var collectCategories func(node ASTAnalyzerTreeNode)
-	collectCategories = func(node ASTAnalyzerTreeNode) {
-		if node.Type == ASTAnalyzerTreeNodeTypeNavigation {
-			categories[node.Label] = true
-		}
-		for _, child := range node.Children {
-			collectCategories(child)
+	recognized := 0
+	for _, m := range matches {
+		if hasAnyMatches(tagsToMap(m), dataTags) ||
+			hasAnyMatches(tagsToMap(m), clientBehaviorTags) ||
+			hasAnyMatches(tagsToMap(m), frameworkTags) ||
+			hasAnyMatches(tagsToMap(m), objectSchemasTags) {
+			recognized++
+			assert.Truef(t, placed[m.Value], "recognized match %q was not placed in the tree", m.Value)
 		}
 	}
-	for _, rootNode := range result {
-		collectCategories(rootNode)
+	assert.Greater(t, recognized, 0, "expected at least one recognized match")
+	assert.GreaterOrEqual(t, countMatchNodes(result), recognized)
+
+	// Root categories from the v2 descriptors tree.
+	categories := map[string]bool{}
+	for _, n := range result {
+		categories[n.Label] = true
+	}
+	for _, category := range []string{"Data", "Client Behavior"} {
+		assert.Truef(t, categories[category], "expected root category %q to be present", category)
 	}
 
-	// Verify some expected categories are present
-	expectedCategories := []string{"Data", "Iframe Communication", "Storage", "Behavior"}
-	for _, category := range expectedCategories {
-		assert.True(t, categories[category], "Expected category %s to be present", category)
+	// Spot-check known values.
+	for _, value := range []string{"/api/users", "window.postMessage('data', '*')", "document.cookie = 'session=123'"} {
+		assert.Truef(t, placed[value], "expected %q in tree", value)
 	}
+}
+
+func tagsToMap(m AnalyzerMatch) map[string][]AnalyzerMatch {
+	out := make(map[string][]AnalyzerMatch, len(m.Tags))
+	for tag := range m.Tags {
+		out[tag] = append(out[tag], m)
+	}
+	return out
 }

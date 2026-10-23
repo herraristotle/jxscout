@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  GO_VERSION: "1.23"
+  BUN_VERSION: "1.2.12"
+
+jobs:
+  go:
+    name: Go (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+        # sqlite3's vendored C emits a discarded-qualifier warning on some
+        # toolchains; the build itself is fine, so only vet is advisory here.
+        continue-on-error: true
+
+      - name: Test
+        run: go test -race ./...
+        if: runner.os != 'Windows'
+        # -race needs cgo + a C toolchain; windows-latest runners lack it for
+        # the sqlite3 driver, so Windows runs without the race detector.
+      - name: Test (Windows)
+        run: go test ./...
+        if: runner.os == 'Windows'
+
+  typescript:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Unit tests
+        run: bunx vitest run

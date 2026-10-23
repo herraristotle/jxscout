@@ -28,6 +28,15 @@ export function createBaseTest(
       a.value.localeCompare(b.value)
     );
 
+    // Normalize filePath in both results and expected for cross-machine compatibility
+    const normalizeFilePath = (match: AnalyzerMatch) => ({
+      ...match,
+      filePath: path.basename(match.filePath) // Only compare filename, not full path
+    });
+
+    const normalizedResults = sortedResults.map(normalizeFilePath);
+    const normalizedExpected = sortedExpected.map(normalizeFilePath);
+
     const expectedPath = path.join(
       __dirname,
       testType,
@@ -43,7 +52,7 @@ export function createBaseTest(
       fs.writeFileSync(outputPath, JSON.stringify(sortedResults, null, 2));
     }
 
-    expect(sortedResults).toEqual(sortedExpected);
+    expect(normalizedResults).toEqual(normalizedExpected);
   });
 }
 

@@ -5,6 +5,7 @@ import Sval from "sval";
 import {
   getViteChunks,
   getNextJsChunks,
+  findChunkFilenameFunction,
   getTurbopackChunks,
   getGoogleLazyChunks,
   identifyChunkLoadingFunctionAndExpression,
@@ -32,28 +33,42 @@ export const discoverChunks = (
     });
   }
 
+  // Cheap string pre-checks: a full estree traverse costs seconds on multi-MB
+  // bundles, so skip fingerprint passes whose marker is not in the source.
   // Turbopack discovery (highest priority)
-  const turbopackChunks = getTurbopackChunks(ast);
-  if (turbopackChunks.length !== 0) {
-    return turbopackChunks;
+  if (code.includes("TURBOPACK") || code.includes("turbopack")) {
+    const turbopackChunks = getTurbopackChunks(ast);
+    if (turbopackChunks.length !== 0) {
+      return turbopackChunks;
+    }
   }
 
   // Google lazy chunks (if enabled)
-  if (discoverGoogleLazyChunks) {
+  if (discoverGoogleLazyChunks && code.includes("lazyChunk")) {
     const googleChunks = getGoogleLazyChunks(ast);
     if (googleChunks.length !== 0) {
       return googleChunks;
     }
   }
 
-  const nextJsChunks = nextJsChunkDiscovery(ast);
-  if (nextJsChunks.length !== 0) {
-    return nextJsChunks;
+  if (code.includes("__BUILD_MANIFEST") || code.includes("__SSG_MANIFEST")) {
+    const nextJsChunks = nextJsChunkDiscovery(ast);
+    if (nextJsChunks.length !== 0) {
+      return nextJsChunks;
+    }
   }
 
-  const webpackChunks = webpackCunkDiscovery(ast, sourceType, bruteforceLimit);
+  const webpackChunks =
+    code.includes("Loading chunk ") ||
+    code.includes("__webpack_require__.u")
+      ? webpackCunkDiscovery(ast, sourceType, bruteforceLimit)
+      : [];
   if (webpackChunks.length !== 0) {
     return webpackChunks;
+  }
+
+  if (!code.includes("__vite__mapDeps")) {
+    return [];
   }
 
   return viteChunkDiscovery(ast, sourceType, bruteforceLimit);
@@ -79,12 +94,25 @@ const webpackCunkDiscovery = (
   sourceType: "module" | "script",
   bruteforceLimit: number
 ): string[] => {
-  const chunkFunctionContext = identifyChunkLoadingFunctionAndExpression(ast);
-  if (!chunkFunctionContext) {
-    return [];
+  // Normal path: the "Loading chunk " error handler gives both the chunk
+  // function and the expression building the URL.
+  let chunkFunctionContext = identifyChunkLoadingFunctionAndExpression(ast);
+
+  let chunkFunctionCode: string | undefined;
+  if (chunkFunctionContext) {
+    chunkFunctionCode = getChunkFunctionCode(chunkFunctionContext, ast);
   }
 
-  const chunkFunctionCode = getChunkFunctionCode(chunkFunctionContext, ast);
+  // Fallback: entry bundles that contain only the webpack runtime
+  // (`__webpack_require__.u`), with no error handler string.
+  if (!chunkFunctionCode) {
+    const filenameContext = findChunkFilenameFunction(ast);
+    if (!filenameContext) {
+      return [];
+    }
+    chunkFunctionCode = getChunkFunctionCode(filenameContext, ast);
+  }
+
   if (!chunkFunctionCode) {
     return [];
   }

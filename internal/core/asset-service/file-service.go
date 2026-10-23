@@ -53,11 +53,11 @@ func (s *fileServiceImpl) SaveInSubfolder(ctx context.Context, subfolder string,
 	return s.save(ctx, filePath, req)
 }
 
+// cleanWindows strips characters NTFS forbids from a single path component.
+// Parentheses are legal on Windows and common in JS filenames
+// (e.g. `chunk(1).js`), so they are deliberately kept.
 func cleanWindows(p string) string {
-	// This regex should ideally only be applied to the filename component, not the whole path.
-	// Applying to the whole path might remove valid characters from directory names if they are unusual.
-	// However, keeping original logic for now.
-	m1 := regexp.MustCompile(`[?%*|:"<>()]`)
+	m1 := regexp.MustCompile(`[?%*|:"<>]`)
 	return m1.ReplaceAllString(p, "")
 }
 

@@ -205,37 +205,38 @@ func (b *EventBus) fetchAndDistributeEvents(ctx context.Context, topic, queueNam
 		return errutil.Wrap(err, "failed to fetch events")
 	}
 
+	// Claim each event inside the transaction so concurrent pollers cannot
+	// pick up the same event twice.
+	for _, event := range eventsToProcess {
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO event_processing (event_id, subscriber, status, last_attempt, heartbeat, finished_at)
+			 VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL)
+			 ON CONFLICT(event_id, subscriber) DO UPDATE SET status = ?, last_attempt = CURRENT_TIMESTAMP, heartbeat = CURRENT_TIMESTAMP, finished_at = NULL`,
+			event.ID, queueName, statusProcessing, statusProcessing)
+		if err != nil {
+			return errutil.Wrap(err, "failed to mark event as processing")
+		}
+	}
+
 	if len(eventsToProcess) > 0 {
 		b.log.DebugContext(ctx, "Found events to process", "count", len(eventsToProcess), "topic", topic, "queue", queueName)
 	}
 
-	// Send events to workers after transaction is committed
+	// Commit the claim transaction before handing work to workers. Holding the
+	// transaction open while blocking on the bounded jobs channel deadlocks:
+	// workers need a DB connection to finish, but the pool has exactly one.
+	if err := tx.Commit(); err != nil {
+		return errutil.Wrap(err, "failed to commit transaction")
+	}
+
+	// Send events to workers after the claim is committed.
 	for _, event := range eventsToProcess {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case jobs <- event:
 			b.log.DebugContext(ctx, "Distributing event to worker", "event_id", event.ID, "topic", event.Name)
-			_, err = tx.ExecContext(ctx,
-				`INSERT INTO event_processing (event_id, subscriber, status, last_attempt, heartbeat, finished_at) 
-				 VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL)
-				 ON CONFLICT(event_id, subscriber) DO UPDATE SET status = ?, last_attempt = CURRENT_TIMESTAMP, heartbeat = CURRENT_TIMESTAMP, finished_at = NULL`,
-				event.ID, queueName, statusProcessing, statusProcessing)
-			if err != nil {
-				return errutil.Wrap(err, "failed to mark event as processing")
-			}
-		default:
-			// Commit the transaction before sending to workers
-			if err := tx.Commit(); err != nil {
-				return errutil.Wrap(err, "failed to commit transaction")
-			}
-			return nil
 		}
-	}
-
-	// Commit the transaction before sending to workers
-	if err := tx.Commit(); err != nil {
-		return errutil.Wrap(err, "failed to commit transaction")
 	}
 
 	return nil

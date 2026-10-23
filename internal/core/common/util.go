@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,7 +29,7 @@ func StrPtr(s *string) string {
 func NormalizeURL(rawURL string) string {
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
-		// TODO: we should be logging this
+		slog.Warn("failed to parse URL, using raw value", "url", rawURL, "error", err)
 		return rawURL
 	}
 
@@ -55,22 +56,24 @@ func NormalizeHTMLURL(rawURL string) (string, error) {
 	return htmlPath, nil
 }
 
-// TODO: make this more robust. e.g. toilet blah blah would match because of let keyword
-func isLikelyJavaScript(str string) bool {
-	// Common JavaScript keywords and syntax patterns
-	jsPatterns := []string{
-		`\bfunction\s+\w+\s*\(`,        // function declarations
-		`\b(const|let|var)\s+\w+\s*=?`, // variable declarations
-		`\bif\s*\(.*\)\s*{`,            // if statements
-		`\bfor\s*\(.*\)\s*{`,           // for loops
-		`\bwhile\s*\(.*\)\s*{`,         // while loops
-		`=>`,                           // arrow functions
-		`\${.*}`,                       // template literals
-	}
+// jsPatterns are compiled once: isLikelyJavaScript runs on every ingested
+// response, and matching recompiled regexes dominated its cost.
+var jsPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`\bfunction\s+[\w$]+\s*\(`), // function declarations
+	regexp.MustCompile(`\b(const|let|var)\s+[$A-Za-z_]\w*\s*[=;]`), // variable declarations
+	regexp.MustCompile(`\bif\s*\(.*\)\s*\{`),                       // if statements
+	regexp.MustCompile(`\bfor\s*\(.*\)\s*\{`),                      // for loops
+	regexp.MustCompile(`\bwhile\s*\(.*\)\s*\{`),                    // while loops
+	regexp.MustCompile(`=>`),                                       // arrow functions
+	regexp.MustCompile(`\$\{[^}]*\}`),                              // template literals
+}
 
+// isLikelyJavaScript reports whether a decoded body looks like JS source.
+// The variable-declaration pattern requires an assignment or terminator so
+// prose such as "Please let us know" does not match.
+func isLikelyJavaScript(str string) bool {
 	for _, pattern := range jsPatterns {
-		matched, _ := regexp.MatchString(pattern, str)
-		if matched {
+		if pattern.MatchString(str) {
 			return true
 		}
 	}

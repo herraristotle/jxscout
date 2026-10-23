@@ -49,6 +49,51 @@
           "default": 5,
           "minimum": 1
         },
+        "http_request_ingestion": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "scope": {
+              "type": "object",
+              "properties": {
+                "in_scope": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "max_saved_requests_per_unique_endpoint": { "type": "integer", "minimum": 1 },
+                      "request_scope": {
+                        "type": "object",
+                        "properties": {
+                          "host": { "type": "array", "items": { "type": "string" } },
+                          "path": { "type": "array", "items": { "type": "string" } },
+                          "method": { "type": "array", "items": { "type": "string" } }
+                        }
+                      }
+                    }
+                  }
+                },
+                "out_of_scope": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "max_saved_requests_per_unique_endpoint": { "type": "integer", "minimum": 1 },
+                      "request_scope": {
+                        "type": "object",
+                        "properties": {
+                          "host": { "type": "array", "items": { "type": "string" } },
+                          "path": { "type": "array", "items": { "type": "string" } },
+                          "method": { "type": "array", "items": { "type": "string" } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "beautifier": {
           "type": "integer",
           "default": 3,
@@ -73,6 +118,21 @@
           "type": "integer",
           "default": 3,
           "minimum": 1
+        }
+      }
+    },
+    "beautifier": {
+      "type": "object",
+      "properties": {
+        "transformations": {
+          "type": "object",
+          "properties": {
+            "iterations": { "type": "integer", "minimum": 1, "default": 1 },
+            "transformers": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["json_parse", "variable_inliner", "string_concat"] }
+            }
+          }
         }
       }
     },
@@ -282,6 +342,25 @@
           "type": "string",
           "default": "1920x1080"
         }
+      }
+    },
+    "monitoring_notifier": {
+      "type": "object",
+      "properties": {
+        "discord_webhook_url": { "type": "string" },
+        "notify_js_file_updates": { "type": "boolean", "default": true },
+        "notify_new_js_files": { "type": "boolean", "default": true },
+        "notify_new_js_matches": { "type": "boolean", "default": true },
+        "notify_request_failures": { "type": "boolean", "default": true },
+        "notify_html_file_updates": { "type": "boolean", "default": false },
+        "notify_new_html_matches": { "type": "boolean", "default": false }
+      }
+    },
+    "agent_skills": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "agents_folder_name": { "type": "string", "default": ".agents" }
       }
     }
   }

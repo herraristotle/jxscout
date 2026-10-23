@@ -119,6 +119,9 @@ jobs:
           git archive --format=zip --output=dist/${{ env.PROJECT_NAME }}_${{ steps.get_version.outputs.VERSION }}_source.zip HEAD
           git archive --format=tar.gz --output=dist/${{ env.PROJECT_NAME }}_${{ steps.get_version.outputs.VERSION }}_source.tar.gz HEAD
 
+      - name: Stage installers
+        run: cp install.sh install.ps1 dist/
+
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:

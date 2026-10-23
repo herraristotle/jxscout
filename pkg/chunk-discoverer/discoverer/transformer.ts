@@ -15,6 +15,76 @@ import {
   matchesPropertyAssignChunkBuilderFunction,
 } from "./fingerprinting";
 
+// Building this index costs one full AST traversal. Before, every
+// simplifyCallExpression call re-traversed the whole program, which on a
+// multi-MB bundle is seconds per optimization step.
+interface ChunkBuilderIndex {
+  properties: Map<string, NodePath<Expression>>;
+  functions: Map<string, NodePath<FunctionDeclaration>>;
+}
+
+const chunkBuilderIndexCache = new WeakMap<Program, ChunkBuilderIndex>();
+
+const getChunkBuilderIndex = (ast: Program): ChunkBuilderIndex => {
+  const cached = chunkBuilderIndexCache.get(ast);
+  if (cached) {
+    return cached;
+  }
+
+  const index: ChunkBuilderIndex = {
+    properties: new Map(),
+    functions: new Map(),
+  };
+
+  traverse(ast, {
+    AssignmentExpression(path) {
+      const left = path.get("left");
+      if (
+        !is.memberExpression(left) ||
+        !is.identifier(left.node?.object) ||
+        !is.identifier(left.node?.property)
+      ) {
+        return;
+      }
+
+      const leftIdentifier = left.node.object.name;
+      const rightIdentifier = left.node.property.name;
+      const key = `${leftIdentifier}.${rightIdentifier}`;
+      if (index.properties.has(key)) {
+        return;
+      }
+
+      if (
+        matchesPropertyAssignChunkBuilderFunction(
+          path,
+          leftIdentifier,
+          rightIdentifier
+        ) ||
+        matchesHardcodedHashFunction(path, leftIdentifier, rightIdentifier)
+      ) {
+        index.properties.set(key, path.get("right") as any);
+      }
+    },
+    FunctionDeclaration(path) {
+      if (!is.identifier(path.node?.id)) {
+        return;
+      }
+
+      const name = path.node.id.name;
+      if (index.functions.has(name)) {
+        return;
+      }
+
+      if (matchesFunctionDeclarationChunkBuilderFunction(path, name)) {
+        index.functions.set(name, path);
+      }
+    },
+  });
+
+  chunkBuilderIndexCache.set(ast, index);
+  return index;
+};
+
 export const getChunkFunctionCode = (
   context: ChunkLoadingFingerprintContext,
   ast: Program
@@ -126,33 +196,9 @@ const simplifyMemberExpressionCall = (
   const leftIdentifier = callee.object;
   const rightIdentifier = callee.property;
 
-  let functionExpression: NodePath<Expression> | undefined;
-
-  traverse(ast, {
-    AssignmentExpression(path) {
-      if (
-        matchesPropertyAssignChunkBuilderFunction(
-          path,
-          leftIdentifier.name,
-          rightIdentifier.name
-        )
-      ) {
-        functionExpression = path.get("right") as any;
-        this.stop();
-      }
-
-      if (
-        matchesHardcodedHashFunction(
-          path,
-          leftIdentifier.name,
-          rightIdentifier.name
-        )
-      ) {
-        functionExpression = path.get("right") as any;
-        this.stop();
-      }
-    },
-  });
+  const functionExpression = getChunkBuilderIndex(ast).properties.get(
+    `${leftIdentifier.name}.${rightIdentifier.name}`
+  );
 
   if (!functionExpression?.node) {
     return false;
@@ -186,16 +232,9 @@ const simplifyFunctionCall = (
 
   const identifier = callee.name;
 
-  let functionDeclaration: NodePath<FunctionDeclaration> | undefined;
-
-  traverse(ast, {
-    FunctionDeclaration(path) {
-      if (matchesFunctionDeclarationChunkBuilderFunction(path, identifier)) {
-        functionDeclaration = path;
-        this.stop();
-      }
-    },
-  });
+  const functionDeclaration = getChunkBuilderIndex(ast).functions.get(
+    identifier
+  );
 
   if (!functionDeclaration?.node) {
     return false;

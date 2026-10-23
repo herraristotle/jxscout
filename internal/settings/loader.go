@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/francisconeves97/jxscout/internal/core/common"
 	"github.com/xeipuuv/gojsonschema"
@@ -223,10 +224,17 @@ func (s *Settings) GetBool(key string) (bool, bool) {
 	return b, ok
 }
 
-// GetDuration retrieves a duration setting (in seconds)
-func (s *Settings) GetDuration(key string) (int, bool) {
-	val, ok := s.GetInt(key)
-	return val, ok
+// GetDuration retrieves a duration setting and parses it (e.g., "10m", "1h", "24h")
+func (s *Settings) GetDuration(key string) (time.Duration, bool) {
+	val, ok := s.GetString(key)
+	if !ok {
+		return 0, false
+	}
+	d, err := time.ParseDuration(val)
+	if err != nil {
+		return 0, false
+	}
+	return d, true
 }
 
 // Validate validates settings against schema
@@ -632,8 +640,8 @@ func defaultGlobalSettings() string {
     "notify_new_html_matches": false
   },
   "agent_skills": {
-    "enabled": { "type": "boolean", "default": true },
-    "agents_folder_name": { "type": "string", "default": ".agents" }
+    "enabled": true,
+    "agents_folder_name": ".agents"
   }
 }`
 }

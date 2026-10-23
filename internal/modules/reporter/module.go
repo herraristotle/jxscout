@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/francisconeves97/jxscout/internal/core/common"
@@ -22,28 +23,28 @@ type ReporterModule struct {
 }
 
 type ReportRequest struct {
-	Project      string   `json:"project"`
-	Format       string   `json:"format"` // pdf, html, json
+	Project         string   `json:"project"`
+	Format          string   `json:"format"` // pdf, html, json
 	IncludeSections []string `json:"include_sections"`
 }
 
 type ReportData struct {
-	Project           string
-	GeneratedAt       time.Time
-	TotalAssets       int
-	TotalFindings     int
-	SourcemapCoverage float64
+	Project            string
+	GeneratedAt        time.Time
+	TotalAssets        int
+	TotalFindings      int
+	SourcemapCoverage  float64
 	FindingsBySeverity map[string]int
-	Assets            []AssetSummary
-	Findings          []FindingSummary
+	Assets             []AssetSummary
+	Findings           []FindingSummary
 }
 
 type AssetSummary struct {
-	URL         string
-	ContentType string
-	IsBeautified bool
-	IsOptimized bool
-	IsUnpacked  bool
+	URL            string
+	ContentType    string
+	IsBeautified   bool
+	IsOptimized    bool
+	IsUnpacked     bool
 	ScreenshotPath *string
 }
 
@@ -121,8 +122,8 @@ func (m *ReporterModule) handleGenerateReport(w http.ResponseWriter, r *http.Req
 
 func (m *ReporterModule) collectReportData(ctx context.Context, project string) (*ReportData, error) {
 	data := &ReportData{
-		Project:     project,
-		GeneratedAt: time.Now(),
+		Project:            project,
+		GeneratedAt:        time.Now(),
 		FindingsBySeverity: make(map[string]int),
 	}
 
@@ -196,31 +197,35 @@ func (m *ReporterModule) collectReportData(ctx context.Context, project string) 
 }
 
 func (m *ReporterModule) generatePDF(data *ReportData) (string, error) {
-	// Simple text-based PDF without external library
 	reportsDir := filepath.Join(common.GetWorkingDirectory(data.Project), "reports")
 	if err := os.MkdirAll(reportsDir, 0755); err != nil {
 		return "", errutil.Wrap(err, "failed to create reports directory")
 	}
 
-	// Generate as text file for now (can be enhanced with chromedp for HTML->PDF)
-	outputPath := filepath.Join(reportsDir, fmt.Sprintf("report_%s.txt", time.Now().Format("20060102_150405")))
+	outputPath := filepath.Join(reportsDir, fmt.Sprintf("report_%s.pdf", time.Now().Format("20060102_150405")))
 
-	content := fmt.Sprintf(`JXScout Report - %s
-Generated: %s
-
-=== Summary ===
-Total Assets: %d
-Total Findings: %d
-
-=== Findings by Analyzer ===
-`, data.Project, data.GeneratedAt.Format(time.RFC3339), data.TotalAssets, data.TotalFindings)
-
-	for analyzer, count := range data.FindingsBySeverity {
-		content += fmt.Sprintf("%s: %d\n", analyzer, count)
+	lines := []string{
+		fmt.Sprintf("JXScout Report - %s", data.Project),
+		fmt.Sprintf("Generated: %s", data.GeneratedAt.Format(time.RFC3339)),
+		"",
+		"=== Summary ===",
+		fmt.Sprintf("Total Assets: %d", data.TotalAssets),
+		fmt.Sprintf("Total Findings: %d", data.TotalFindings),
+		"",
+		"=== Findings by Analyzer ===",
 	}
 
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
-		return "", errutil.Wrap(err, "failed to write report file")
+	analyzers := make([]string, 0, len(data.FindingsBySeverity))
+	for analyzer := range data.FindingsBySeverity {
+		analyzers = append(analyzers, analyzer)
+	}
+	sort.Strings(analyzers)
+	for _, analyzer := range analyzers {
+		lines = append(lines, fmt.Sprintf("%s: %d", analyzer, data.FindingsBySeverity[analyzer]))
+	}
+
+	if err := os.WriteFile(outputPath, buildPDF(lines), 0644); err != nil {
+		return "", errutil.Wrap(err, "failed to write PDF report")
 	}
 
 	return outputPath, nil

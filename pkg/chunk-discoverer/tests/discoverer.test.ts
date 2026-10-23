@@ -63,11 +63,12 @@ const testCases: DiscovererTestCase[] = [
     jsFileName: "6.js",
     expectedChunks: [],
   },
-  // TODO: 7.js has a chunk loading function, so we should be at least bruteforcing
-  // however since it doesn't have the "Loading chunk " fingerprint, it is being disregarded
+  // 7.js ships only the webpack runtime: no "Loading chunk " handler, but
+  // __webpack_require__.u builds the filename from chunkId, so bruteforcing
+  // the id space still yields chunks.
   {
     jsFileName: "7.js",
-    expectedChunks: [],
+    expectedChunks: ["0.js", "1.js", "2.js", "3.js", "4.js"],
   },
   {
     jsFileName: "8.js",

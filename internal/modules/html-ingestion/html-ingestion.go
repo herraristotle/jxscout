@@ -83,7 +83,7 @@ func (m *htmlIngestionModule) handleIngestionRequest(req *ingestion.IngestionReq
 		RequestHeaders: req.Request.Headers,
 	})
 
-	extractedJS, err := extractJS(req.Response.Body, req.Request.URL)
+	extractedJS, err := extractJS(req.Response.Body, req.Request.URL, m.sdk.Logger)
 	if err != nil {
 		return errutil.Wrap(err, "failed to extract JS")
 	}

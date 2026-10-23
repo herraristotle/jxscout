@@ -4,13 +4,15 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
-	"github.com/francisconeves97/jxscout/internal/core/common"
 	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
+	"github.com/francisconeves97/jxscout/internal/core/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -21,6 +23,10 @@ type JSONRPCRequest struct {
 	ID      interface{}     `json:"id,omitempty"`
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params,omitempty"`
+
+	// TransportProtocolVersion carries the MCP-Protocol-Version header value
+	// on the HTTP transport. Not part of the JSON body.
+	TransportProtocolVersion string `json:"-"`
 }
 
 type JSONRPCResponse struct {
@@ -36,6 +42,28 @@ type RPCError struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
+// codedError lets handlers return a specific JSON-RPC error code.
+type codedError struct {
+	code    int
+	message string
+	data    interface{}
+}
+
+func (e *codedError) Error() string { return e.message }
+
+func newCodedError(code int, message string, data interface{}) error {
+	return &codedError{code: code, message: message, data: data}
+}
+
+// rpcCode maps an error to the JSON-RPC code to answer with.
+func rpcCode(err error) (int, interface{}) {
+	var ce *codedError
+	if errors.As(err, &ce) {
+		return ce.code, ce.data
+	}
+	return -32603, nil
+}
+
 type Server struct {
 	scanner *bufio.Scanner
 	encoder *json.Encoder
@@ -48,7 +76,81 @@ func NewServer() *Server {
 	}
 }
 
+// supportedProtocolVersions is the single MCP revision this server speaks.
+// 2026-07-28 is the modern, stateless era: version and identity travel with
+// each request instead of a session handshake. See
+// https://modelcontextprotocol.io/specification/versioning
+var supportedProtocolVersions = []string{"2026-07-28"}
+
+const (
+	latestProtocolVersion = "2026-07-28"
+
+	// codeUnsupportedProtocolVersion is MCP's -32022 (UnsupportedProtocolVersion).
+	codeUnsupportedProtocolVersion = -32022
+
+	metaProtocolVersion = "io.modelcontextprotocol/protocolVersion"
+	metaServerInfo      = "io.modelcontextprotocol/serverInfo"
+)
+
+func isSupportedProtocolVersion(v string) bool {
+	return v == latestProtocolVersion
+}
+
+// requestProtocolVersion resolves the protocol version a request declares.
+// The HTTP header wins when present; otherwise _meta is read.
+func requestProtocolVersion(req *JSONRPCRequest) string {
+	if req.TransportProtocolVersion != "" {
+		return req.TransportProtocolVersion
+	}
+	if len(req.Params) == 0 {
+		return ""
+	}
+	var p struct {
+		Meta map[string]interface{} `json:"_meta"`
+	}
+	if err := json.Unmarshal(req.Params, &p); err != nil {
+		return ""
+	}
+	if v, ok := p.Meta[metaProtocolVersion].(string); ok {
+		return v
+	}
+	return ""
+}
+
+var serverInfo = map[string]string{
+	"name":    "jxscout-mcp",
+	"version": "1.0.0-oss",
+}
+
+var serverCapabilities = map[string]interface{}{
+	"tools":     map[string]bool{},
+	"resources": map[string]bool{},
+	"prompts":   map[string]bool{},
+}
+
+// decorate adds the fields every 2026-07-28 result must carry.
+func decorate(result interface{}) interface{} {
+	m, ok := result.(map[string]interface{})
+	if !ok {
+		return result
+	}
+	if _, exists := m["resultType"]; !exists {
+		m["resultType"] = "complete"
+	}
+	meta, _ := m["_meta"].(map[string]interface{})
+	if meta == nil {
+		meta = map[string]interface{}{}
+	}
+	meta[metaServerInfo] = serverInfo
+	m["_meta"] = meta
+	return m
+}
+
 func (s *Server) Run(ctx context.Context) error {
+	// MCP frames are one JSON message per line; the default 64 KiB token limit
+	// is too small for tool calls carrying asset content.
+	s.scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
+
 	for s.scanner.Scan() {
 		line := s.scanner.Bytes()
 
@@ -58,9 +160,15 @@ func (s *Server) Run(ctx context.Context) error {
 			continue
 		}
 
+		// Notifications (no id) never get a response, per JSON-RPC 2.0.
+		if req.ID == nil {
+			continue
+		}
+
 		result, err := s.HandleRequest(ctx, &req)
 		if err != nil {
-			s.sendError(req.ID, -32603, err.Error(), nil)
+			code, data := rpcCode(err)
+			s.sendError(req.ID, code, err.Error(), data)
 			continue
 		}
 
@@ -71,29 +179,219 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) HandleRequest(ctx context.Context, req *JSONRPCRequest) (interface{}, error) {
+	if v := requestProtocolVersion(req); v != "" && !isSupportedProtocolVersion(v) {
+		return nil, newCodedError(codeUnsupportedProtocolVersion,
+			"unsupported protocol version: "+v,
+			map[string]interface{}{"supported": supportedProtocolVersions})
+	}
+
+	var result interface{}
+	var err error
+
 	switch req.Method {
-	case "initialize":
-		return s.handleInitialize(ctx, req.Params)
+	case "server/discover":
+		return decorate(s.handleDiscover()), nil
+	case "ping":
+		result = struct{}{}
 	case "tools/list":
-		return s.handleToolsList(ctx, req.Params)
+		result, err = s.handleToolsList(ctx, req.Params)
 	case "tools/call":
-		return s.handleToolsCall(ctx, req.Params)
+		result, err = s.handleToolsCall(ctx, req.Params)
+	case "resources/list":
+		result, err = s.handleResourcesList(ctx)
+	case "resources/read":
+		result, err = s.handleResourcesRead(ctx, req.Params)
+	case "prompts/list":
+		result, err = s.handlePromptsList()
+	case "prompts/get":
+		result, err = s.handlePromptsGet(req.Params)
 	default:
-		return nil, fmt.Errorf("method not found: %s", req.Method)
+		return nil, newCodedError(-32601, "method not found: "+req.Method, nil)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return decorate(result), nil
+}
+
+// handleDiscover implements the mandatory server/discover RPC (2026-07-28),
+// which advertises versions, capabilities and identity in one call.
+func (s *Server) handleDiscover() map[string]interface{} {
+	return map[string]interface{}{
+		"supportedVersions": supportedProtocolVersions,
+		"capabilities":      serverCapabilities,
+		"cacheScope":        "public",
+		"ttlMs":             0,
 	}
 }
 
-func (s *Server) handleInitialize(ctx context.Context, params json.RawMessage) (interface{}, error) {
+func (s *Server) handlePromptsList() (interface{}, error) {
 	return map[string]interface{}{
-		"protocolVersion": "2024-11-05",
-		"serverInfo": map[string]string{
-			"name":    "jxscout-mcp",
-			"version": "1.0.0-oss",
-		},
-		"capabilities": map[string]interface{}{
-			"tools": map[string]bool{},
+		"prompts": []map[string]interface{}{
+			{
+				"name":        "triage-asset",
+				"description": "Review the AST descriptors of a saved asset and report interesting sinks",
+				"arguments": []map[string]interface{}{
+					{"name": "project", "description": "Project name", "required": true},
+					{"name": "url", "description": "Asset URL", "required": true},
+				},
+			},
 		},
 	}, nil
+}
+
+func (s *Server) handlePromptsGet(params json.RawMessage) (interface{}, error) {
+	var p struct {
+		Name      string            `json:"name"`
+		Arguments map[string]string `json:"arguments"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, fmt.Errorf("invalid prompts/get params: %w", err)
+	}
+	if p.Name != "triage-asset" {
+		return nil, fmt.Errorf("unknown prompt: %s", p.Name)
+	}
+
+	project, ok := p.Arguments["project"]
+	if !ok || project == "" {
+		return nil, fmt.Errorf("project argument required")
+	}
+	url := p.Arguments["url"]
+	if url == "" {
+		return nil, fmt.Errorf("url argument required")
+	}
+
+	text := fmt.Sprintf(`Review asset %s in project %s.
+
+1. Call jxscout_get_descriptors with project=%q url=%q.
+2. Call jxscout_get_asset for the same asset to see its saved path and headers.
+3. Group descriptors by analyzer. For each group, say whether the match is
+   reachable from attacker-controlled input and what it would take to exploit.
+4. Rank the groups by severity and name the single best candidate to investigate
+   first. Do not invent data that is not in the tool output.`, url, project, project, url)
+
+	return map[string]interface{}{
+		"description": fmt.Sprintf("Triage asset %s", url),
+		"messages": []map[string]interface{}{
+			{
+				"role": "user",
+				"content": map[string]string{
+					"type": "text",
+					"text": text,
+				},
+			},
+		},
+	}, nil
+}
+
+// assetResourceURI is the canonical resource id for a saved asset:
+// jxscout://<project>/<path relative to the project assets dir>.
+const assetResourceURI = "jxscout://"
+
+func (s *Server) handleResourcesList(ctx context.Context) (interface{}, error) {
+	projects, err := listProjectNames()
+	if err != nil {
+		return nil, err
+	}
+
+	resources := []map[string]interface{}{}
+	for _, project := range projects {
+		resources = append(resources, map[string]interface{}{
+			"uri":         assetResourceURI + project + "/",
+			"name":        project,
+			"description": fmt.Sprintf("Assets saved for project %s", project),
+			"mimeType":    "application/json",
+		})
+	}
+
+	return map[string]interface{}{"resources": resources}, nil
+}
+
+func (s *Server) handleResourcesRead(ctx context.Context, params json.RawMessage) (interface{}, error) {
+	var p struct {
+		URI string `json:"uri"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, fmt.Errorf("invalid resources/read params: %w", err)
+	}
+
+	project, rel, err := parseAssetResourceURI(p.URI)
+	if err != nil {
+		return nil, err
+	}
+
+	assetsDir := filepath.Join(common.GetPrivateDirectory(project), "assets")
+	fullPath := filepath.Join(assetsDir, rel)
+
+	// Resolve symlinks and confirm the result stays inside the assets dir.
+	resolved, err := filepath.EvalSymlinks(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("resource not found: %w", err)
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(assetsDir)
+	if err != nil {
+		return nil, fmt.Errorf("project has no assets: %w", err)
+	}
+	if !strings.HasPrefix(resolved, resolvedRoot+string(os.PathSeparator)) {
+		return nil, fmt.Errorf("resource escapes project assets: %s", p.URI)
+	}
+
+	content, err := os.ReadFile(resolved)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read resource: %w", err)
+	}
+
+	return map[string]interface{}{
+		"contents": []map[string]interface{}{
+			{
+				"uri":      p.URI,
+				"mimeType": "application/javascript",
+				"text":     string(content),
+			},
+		},
+	}, nil
+}
+
+func parseAssetResourceURI(uri string) (project, rel string, err error) {
+	if !strings.HasPrefix(uri, assetResourceURI) {
+		return "", "", fmt.Errorf("unsupported resource uri: %s", uri)
+	}
+	rest := strings.TrimPrefix(uri, assetResourceURI)
+	project, rel, ok := strings.Cut(rest, "/")
+	if !ok || project == "" || rel == "" {
+		return "", "", fmt.Errorf("resource uri must be %s<project>/<asset path>", assetResourceURI)
+	}
+	if _, err := projectDir(project); err != nil {
+		return "", "", err
+	}
+	return project, rel, nil
+}
+
+// projectDir validates a project name and returns its private directory.
+// Project names come from MCP clients, so reject anything that could escape
+// the projects root.
+func projectDir(project string) (string, error) {
+	if project == "" || project == "." || project == ".." ||
+		strings.ContainsAny(project, `/\`) {
+		return "", fmt.Errorf("invalid project name: %q", project)
+	}
+	return common.GetPrivateDirectory(project), nil
+}
+
+func listProjectNames() ([]string, error) {
+	entries, err := os.ReadDir(common.GetPrivateDirectoryRoot())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read projects directory: %w", err)
+	}
+
+	projects := []string{}
+	for _, entry := range entries {
+		if entry.IsDir() && entry.Name() != "extracted" {
+			projects = append(projects, entry.Name())
+		}
+	}
+	return projects, nil
 }
 
 func (s *Server) handleToolsList(ctx context.Context, params json.RawMessage) (interface{}, error) {
@@ -213,17 +511,9 @@ func (s *Server) handleToolsCall(ctx context.Context, params json.RawMessage) (i
 }
 
 func (s *Server) listProjects(ctx context.Context) (interface{}, error) {
-	rootDir := common.GetPrivateDirectoryRoot()
-	entries, err := os.ReadDir(rootDir)
+	projects, err := listProjectNames()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read projects directory: %w", err)
-	}
-
-	projects := []string{}
-	for _, entry := range entries {
-		if entry.IsDir() && entry.Name() != "extracted" {
-			projects = append(projects, entry.Name())
-		}
+		return nil, err
 	}
 
 	return map[string]interface{}{
@@ -247,7 +537,11 @@ func (s *Server) listAssets(ctx context.Context, args map[string]interface{}) (i
 		limit = int(l)
 	}
 
-	dbPath := filepath.Join(common.GetPrivateDirectory(project), "db", "db.sql")
+	projectPath, err := projectDir(project)
+	if err != nil {
+		return nil, err
+	}
+	dbPath := filepath.Join(projectPath, "db", "db.sql")
 	db, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -255,9 +549,9 @@ func (s *Server) listAssets(ctx context.Context, args map[string]interface{}) (i
 	defer db.Close()
 
 	var assets []struct {
-		ID           int64  `db:"id"`
-		URL          string `db:"url"`
-		ContentType  string `db:"content_type"`
+		ID          int64  `db:"id"`
+		URL         string `db:"url"`
+		ContentType string `db:"content_type"`
 	}
 	err = db.SelectContext(ctx, &assets,
 		"SELECT id, url, content_type FROM assets WHERE project = ? LIMIT ?",
@@ -285,7 +579,11 @@ func (s *Server) getAsset(ctx context.Context, args map[string]interface{}) (int
 		return nil, fmt.Errorf("project and url parameters required")
 	}
 
-	dbPath := filepath.Join(common.GetPrivateDirectory(project), "db", "db.sql")
+	projectPath, err := projectDir(project)
+	if err != nil {
+		return nil, err
+	}
+	dbPath := filepath.Join(projectPath, "db", "db.sql")
 	db, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -293,19 +591,19 @@ func (s *Server) getAsset(ctx context.Context, args map[string]interface{}) (int
 	defer db.Close()
 
 	var asset struct {
-		ID                int64            `db:"id"`
-		URL               string           `db:"url"`
-		ContentHash       string           `db:"content_hash"`
-		ContentType       string           `db:"content_type"`
-		FileSystemPath    string           `db:"fs_path"`
-		Project           string           `db:"project"`
-		RequestHeaders    *string          `db:"request_headers"`
-		CreatedAt         *string          `db:"created_at"`
-		UpdatedAt         *string          `db:"updated_at"`
-		IsInlineJS        bool             `db:"is_inline_js"`
-		IsChunkDiscovered *bool            `db:"is_chunk_discovered"`
-		ChunkFromAssetID  *int64           `db:"chunk_from_asset_id"`
-		IsBeautified      bool             `db:"is_beautified"`
+		ID                int64   `db:"id"`
+		URL               string  `db:"url"`
+		ContentHash       string  `db:"content_hash"`
+		ContentType       string  `db:"content_type"`
+		FileSystemPath    string  `db:"fs_path"`
+		Project           string  `db:"project"`
+		RequestHeaders    *string `db:"request_headers"`
+		CreatedAt         *string `db:"created_at"`
+		UpdatedAt         *string `db:"updated_at"`
+		IsInlineJS        bool    `db:"is_inline_js"`
+		IsChunkDiscovered *bool   `db:"is_chunk_discovered"`
+		ChunkFromAssetID  *int64  `db:"chunk_from_asset_id"`
+		IsBeautified      bool    `db:"is_beautified"`
 	}
 	err = db.GetContext(ctx, &asset,
 		"SELECT id, url, content_hash, content_type, fs_path, project, request_headers, created_at, updated_at, is_inline_js, is_chunk_discovered, chunk_from_asset_id, is_beautified FROM assets WHERE project = ? AND url = ?",
@@ -333,7 +631,11 @@ func (s *Server) getDescriptors(ctx context.Context, args map[string]interface{}
 		return nil, fmt.Errorf("project and url parameters required")
 	}
 
-	dbPath := filepath.Join(common.GetPrivateDirectory(project), "db", "db.sql")
+	projectPath, err := projectDir(project)
+	if err != nil {
+		return nil, err
+	}
+	dbPath := filepath.Join(projectPath, "db", "db.sql")
 	db, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -372,7 +674,11 @@ func (s *Server) generateWordlist(ctx context.Context, args map[string]interface
 		wlType = "paths"
 	}
 
-	dbPath := filepath.Join(common.GetPrivateDirectory(project), "db", "db.sql")
+	projectPath, err := projectDir(project)
+	if err != nil {
+		return nil, err
+	}
+	dbPath := filepath.Join(projectPath, "db", "db.sql")
 	db, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -383,8 +689,12 @@ func (s *Server) generateWordlist(ctx context.Context, args map[string]interface
 	switch wlType {
 	case "paths":
 		wordlist, err = extractPathsFromDB(ctx, db, project)
+	case "secrets":
+		wordlist, err = extractAnalyzerValues(ctx, db, project, "secrets")
+	case "params":
+		wordlist, err = extractAnalyzerValues(ctx, db, project, "url-search-params")
 	case "packages":
-		wordlist, err = extractPackagesFromDB(ctx, db, project)
+		wordlist, err = extractAnalyzerValues(ctx, db, project, "dependency-confusion")
 	default:
 		return nil, fmt.Errorf("unsupported wordlist type: %s", wlType)
 	}
@@ -421,14 +731,12 @@ func extractPathsFromDB(ctx context.Context, db *sqlx.DB, project string) ([]str
 		}
 	}
 
-	result := make([]string, 0, len(pathSet))
-	for path := range pathSet {
-		result = append(result, path)
-	}
-	return result, nil
+	return sortedKeys(pathSet), nil
 }
 
-func extractPackagesFromDB(ctx context.Context, db *sqlx.DB, project string) ([]string, error) {
+// extractAnalyzerValues returns the sorted unique `value` fields emitted by
+// the named AST analyzer across a project.
+func extractAnalyzerValues(ctx context.Context, db *sqlx.DB, project, analyzerName string) ([]string, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT aa.results
 		FROM ast_analysis_results aa
@@ -440,7 +748,7 @@ func extractPackagesFromDB(ctx context.Context, db *sqlx.DB, project string) ([]
 	}
 	defer rows.Close()
 
-	packageSet := make(map[string]bool)
+	values := make(map[string]bool)
 	for rows.Next() {
 		var resultsJSON string
 		if err := rows.Scan(&resultsJSON); err != nil {
@@ -453,19 +761,27 @@ func extractPackagesFromDB(ctx context.Context, db *sqlx.DB, project string) ([]
 		}
 
 		for _, result := range results {
-			if typ, ok := result["analyzerName"].(string); ok && typ == "dependency-confusion" {
-				if match, ok := result["value"].(string); ok {
-					packageSet[match] = true
+			if typ, ok := result["analyzerName"].(string); ok && typ == analyzerName {
+				if value, ok := result["value"].(string); ok {
+					values[value] = true
 				}
 			}
 		}
 	}
-
-	result := make([]string, 0, len(packageSet))
-	for pkg := range packageSet {
-		result = append(result, pkg)
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
-	return result, nil
+
+	return sortedKeys(values), nil
+}
+
+func sortedKeys(set map[string]bool) []string {
+	result := make([]string, 0, len(set))
+	for k := range set {
+		result = append(result, k)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func (s *Server) sendResult(id interface{}, result interface{}) {

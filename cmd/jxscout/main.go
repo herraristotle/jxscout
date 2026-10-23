@@ -61,7 +61,7 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Println(`jxscout - JavaScript reconnaissance tool
+	fmt.Print(`jxscout - JavaScript reconnaissance tool
 
 USAGE:
   jxscout [flags]                    Start interactive TUI proxy server (default)
@@ -233,7 +233,7 @@ func applySettingsToOptions(s *settings.Settings, o *jxscouttypes.Options) {
 		o.ProjectName = v
 	}
 	if v, ok := s.Get("project.scope_patterns"); ok {
-		if arr, ok := v.([]interface{}); ok {
+		if arr, ok := v.([]any); ok {
 			patterns := make([]string, 0, len(arr))
 			for _, p := range arr {
 				if str, ok := p.(string); ok {
@@ -278,9 +278,13 @@ func applySettingsToOptions(s *settings.Settings, o *jxscouttypes.Options) {
 		o.DiscoverGoogleLazyChunks = v
 	}
 
-	// Cache (duration parsing not implemented yet)
-	_, _ = s.GetString("cache.js_requests_ttl")
-	_, _ = s.GetString("cache.html_requests_ttl")
+	// Cache
+	if v, ok := s.GetDuration("cache.js_requests_ttl"); ok {
+		o.JavascriptRequestsCacheTTL = v
+	}
+	if v, ok := s.GetDuration("cache.html_requests_ttl"); ok {
+		o.HTMLRequestsCacheTTL = v
+	}
 
 	// Rate limiting
 	if v, ok := s.GetInt("rate_limiting.max_requests_per_second"); ok {
@@ -297,7 +301,10 @@ func applySettingsToOptions(s *settings.Settings, o *jxscouttypes.Options) {
 	if v, ok := s.GetBool("features.unpacker_enabled"); ok {
 		o.EnableUnpacker = v
 	}
-	_, _ = s.GetBool("features.screenshots_enabled")
+	if v, ok := s.GetBool("features.screenshots_enabled"); ok {
+		o.EnableScreenshots = v
+	}
+	// hooks_enabled not yet in Options struct
 	_, _ = s.GetBool("features.hooks_enabled")
 
 	// Memory

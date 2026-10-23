@@ -161,8 +161,11 @@ var graphqlOtherTags = []string{"graphql-other"}
 var dataTags = common.AppendAll(
 	pathTags,
 	hostnameTags,
+	extensionTags,
+	mimeTypeTags,
 	regexTags,
 	secretTags,
+	graphqlTags,
 )
 
 func buildDataTree(matchesByTag map[string][]AnalyzerMatch) ASTAnalyzerTreeNode {
@@ -422,17 +425,17 @@ func buildObjectSchemasTree(matchesByTag map[string][]AnalyzerMatch) ASTAnalyzer
 
 // Client Behavior Tags
 // Event Tags
-var eventTags = []string{"add-event-listener", "onmessage", "postMessage", "onhashchange"}
-var addEventListenerTags = []string{"add-event-listener"}
+var eventTags = []string{"add-event-listener", "onmessage", "postMessage", "post-message", "message-listener", "onhashchange"}
+var addEventListenerTags = []string{"add-event-listener", "message-listener"}
 var onmessageTags = []string{"onmessage"}
-var postMessageTags = []string{"postMessage"}
+var postMessageTags = []string{"postMessage", "post-message"}
 var onhashchangeTags = []string{"onhashchange"}
 
 // eval Tags
-var evalTags = []string{"eval"}
+var evalTags = []string{"eval", "javascript-injection"}
 
 // document.domain Tags
-var documentDomainTags = []string{"domain-assignment", "domain-read"}
+var documentDomainTags = []string{"domain-assignment", "domain-read", "document-domain-manipulation"}
 var documentDomainAssignmentTags = []string{"domain-assignment"}
 var documentDomainReadTags = []string{"domain-read"}
 
@@ -440,7 +443,7 @@ var documentDomainReadTags = []string{"domain-read"}
 var windowOpenTags = []string{"window-open"}
 
 // innerHTML Tags
-var innerHTMLTags = []string{"inner-html"}
+var innerHTMLTags = []string{"inner-html", "jquery-dom-xss"}
 
 // fetch Tags
 var fetchTags = []string{"fetch-call"}
@@ -452,8 +455,8 @@ var restClientTags = []string{"http-method"}
 var urlSearchParamsTags = []string{"url-search-params"}
 
 // location Tags
-var locationTags = []string{"location"}
-var locationAssignmentTags = []string{"location-assignment"}
+var locationTags = []string{"location", "link-manipulation"}
+var locationAssignmentTags = []string{"location-assignment", "link-manipulation"}
 var locationReadTags = []string{"location-read"}
 
 // window.name Tags
@@ -462,18 +465,18 @@ var windowNameAssignmentTags = []string{"window-name-assignment"}
 var windowNameReadTags = []string{"window-name-read"}
 
 // Storage tags
-var storageTags = []string{"cookie", "local-storage", "session-storage"}
+var storageTags = []string{"cookie", "local-storage", "session-storage", "cookie-manipulation", "common-sources"}
 
 // cookie tags
-var cookieTags = []string{"cookie"}
-var cookieAssignmentTags = []string{"cookie-assignment"}
-var cookieReadTags = []string{"cookie-read"}
+var cookieTags = []string{"cookie", "cookie-manipulation", "common-sources"}
+var cookieAssignmentTags = []string{"cookie-assignment", "cookie-manipulation", "common-sources"}
+var cookieReadTags = []string{"cookie-read", "common-sources"}
 
 // local-storage tags
-var localStorageTags = []string{"local-storage"}
+var localStorageTags = []string{"local-storage", "html5-storage-manipulation"}
 
 // session-storage tags
-var sessionStorageTags = []string{"session-storage"}
+var sessionStorageTags = []string{"session-storage", "html5-storage-manipulation"}
 
 var clientBehaviorTags = common.AppendAll(
 	eventTags,
@@ -714,6 +717,11 @@ func buildClientBehaviorTree(matchesByTag map[string][]AnalyzerMatch) ASTAnalyze
 			documentDomainNode.Children = append(documentDomainNode.Children, readNode)
 		}
 
+		// Matches tagged only with the parent tag (no assignment/read sub-tag).
+		if len(documentDomainNode.Children) == 0 {
+			addMatchesToNode(&documentDomainNode, matchesByTag, documentDomainTags)
+		}
+
 		behaviorNode.Children = append(behaviorNode.Children, documentDomainNode)
 	}
 
@@ -813,10 +821,18 @@ func groupMatchesByTagStartingWith(matches []AnalyzerMatch, prefix string) map[s
 	matchesByTag := make(map[string][]AnalyzerMatch)
 
 	for _, match := range matches {
+		grouped := false
 		for tag := range match.Tags {
 			if strings.HasPrefix(tag, prefix) {
-				matchesByTag[strings.TrimPrefix(tag, prefix)] = append(matchesByTag[strings.TrimPrefix(tag, prefix)], match)
+				key := strings.TrimPrefix(tag, prefix)
+				matchesByTag[key] = append(matchesByTag[key], match)
+				grouped = true
 			}
+		}
+		// Matches that carry only the parent tag (no sub-tag) must still be
+		// shown, otherwise they silently disappear from the descriptors tree.
+		if !grouped {
+			matchesByTag["Other"] = append(matchesByTag["Other"], match)
 		}
 	}
 	return matchesByTag

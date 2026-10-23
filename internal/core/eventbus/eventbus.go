@@ -6,6 +6,7 @@ package eventbus
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 )
 
@@ -125,7 +126,11 @@ func (g *inMemoryEventBus) Subscribe(topic string) (<-chan Message, error) {
 		subLock.(*sync.Mutex).Lock()
 		defer subLock.(*sync.Mutex).Unlock()
 
-		g.removeSubscriber(topic, s)
+		// Reporting instead of panicking: a double unsubscribe must not crash
+		// the process during shutdown.
+		if !g.removeSubscriber(topic, s) {
+			slog.Warn("subscriber already removed", "topic", topic)
+		}
 		g.subscribersWg.Done()
 	}(s, g)
 
@@ -144,18 +149,14 @@ func (g *inMemoryEventBus) addSubscriber(topic string, s *subscriber) {
 	g.subscribers[topic] = append(g.subscribers[topic], s)
 }
 
-func (g *inMemoryEventBus) removeSubscriber(topic string, toRemove *subscriber) {
-	removed := false
+func (g *inMemoryEventBus) removeSubscriber(topic string, toRemove *subscriber) bool {
 	for i, sub := range g.subscribers[topic] {
 		if sub == toRemove {
 			g.subscribers[topic] = append(g.subscribers[topic][:i], g.subscribers[topic][i+1:]...)
-			removed = true
-			break
+			return true
 		}
 	}
-	if !removed {
-		panic("cannot remove subscriber, not found ")
-	}
+	return false
 }
 
 func (g *inMemoryEventBus) topicSubscribers(topic string) []*subscriber {

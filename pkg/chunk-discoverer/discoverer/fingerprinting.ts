@@ -102,6 +102,82 @@ const findChunkLoadingFunction = (
   return context;
 };
 
+// findChunkFilenameFunction covers entry bundles that ship only the webpack
+// runtime: no "Loading chunk " error handler exists, but the filename
+// template does, as `__webpack_require__.u = (chunkId) => "..." + chunkId + ".js"`.
+// The returned expression is that function's single return argument.
+export const findChunkFilenameFunction = (
+  ast: Program
+): ChunkLoadingFingerprintContext | undefined => {
+  let context: ChunkLoadingFingerprintContext | undefined;
+
+  traverse(ast, {
+    AssignmentExpression(path) {
+      const left = path.get("left");
+      if (
+        !is.memberExpression(left) ||
+        !is.identifier(left.node?.property) ||
+        left.node.property.name !== "u"
+      ) {
+        return;
+      }
+
+      const right = path.get("right");
+      if (
+        !is.functionExpression(right) &&
+        !is.arrowFunctionExpression(right)
+      ) {
+        return;
+      }
+
+      const params = right.get("params");
+      if (params.length !== 1 || !is.identifier(params[0])) {
+        return;
+      }
+
+      const returnExpression = getSingleReturnArgument(right);
+      if (!returnExpression) {
+        return;
+      }
+
+      context = {
+        functionContext: { function: right, chunkIdParam: params[0] },
+        expressionContext: { expression: returnExpression },
+      };
+
+      this.stop();
+    },
+  });
+
+  return context;
+};
+
+const getSingleReturnArgument = (
+  fn: NodePath<Function>
+): NodePath<Expression> | undefined => {
+  const body = fn.get("body");
+  if (!is.blockStatement(body) || body.node?.body.length !== 1) {
+    return;
+  }
+
+  const statement = body.get("body")[0];
+  if (!is.returnStatement(statement)) {
+    return;
+  }
+
+  const argument = statement.get("argument");
+  if (!argument?.node) {
+    return;
+  }
+
+  // Only useful when the template actually names a JS file.
+  if (!hasJSLiteral(argument)) {
+    return;
+  }
+
+  return argument as NodePath<Expression>;
+};
+
 interface ChunkBuilderExpressionContext {
   expression: NodePath<Expression> | undefined;
 }

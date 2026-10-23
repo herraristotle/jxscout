@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 
 	"github.com/francisconeves97/jxscout/pkg/constants"
@@ -30,8 +31,16 @@ func RunMCPServer(cmd *cobra.Command, args []string) error {
 	}
 
 	if useHTTP {
+		token := os.Getenv("MCP_AUTH_TOKEN")
+		if token == "" && !isLoopbackHost(hostname) {
+			return fmt.Errorf("refusing to start MCP HTTP server on non-loopback %q without MCP_AUTH_TOKEN", hostname)
+		}
+		if token == "" {
+			log.Printf("MCP auth disabled (loopback bind only)")
+		}
+
 		log.Printf("Starting MCP HTTP server on %s:%d", hostname, port)
-		httpServer := NewHTTPServer(hostname, port)
+		httpServer := NewHTTPServer(hostname, port, token)
 
 		server := NewServer()
 		httpServer.SetHandler(func(ctx context.Context, req *JSONRPCRequest) (interface{}, error) {
@@ -50,6 +59,14 @@ func RunMCPServer(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func isLoopbackHost(hostname string) bool {
+	if hostname == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(hostname)
+	return ip != nil && ip.IsLoopback()
 }
 
 // NewMCPCommand creates the mcp subcommand

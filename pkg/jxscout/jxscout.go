@@ -14,15 +14,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/francisconeves97/jxscout/internal/core/agentskills"
 	assetfetcher "github.com/francisconeves97/jxscout/internal/core/asset-fetcher"
 	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
-	"github.com/francisconeves97/jxscout/internal/core/agentskills"
 	"github.com/francisconeves97/jxscout/internal/core/common"
 	"github.com/francisconeves97/jxscout/internal/core/database"
 	dbeventbus "github.com/francisconeves97/jxscout/internal/core/dbeventbus"
 	"github.com/francisconeves97/jxscout/internal/core/errutil"
 	"github.com/francisconeves97/jxscout/internal/core/eventbus"
 	"github.com/francisconeves97/jxscout/internal/core/websocket"
+	"github.com/francisconeves97/jxscout/internal/modules/assetgraph"
 	astanalyzer "github.com/francisconeves97/jxscout/internal/modules/ast-analyzer"
 	"github.com/francisconeves97/jxscout/internal/modules/beautifier"
 	"github.com/francisconeves97/jxscout/internal/modules/bookmarks"
@@ -32,11 +33,12 @@ import (
 	"github.com/francisconeves97/jxscout/internal/modules/differ"
 	findingsmodule "github.com/francisconeves97/jxscout/internal/modules/findings"
 	gitcommiter "github.com/francisconeves97/jxscout/internal/modules/git-committer"
-	htmlingestion "github.com/francisconeves97/jxscout/internal/modules/html-ingestion"
 	hooksmodule "github.com/francisconeves97/jxscout/internal/modules/hooks"
-	monitoringmodule "github.com/francisconeves97/jxscout/internal/modules/monitoring"
+	htmlingestion "github.com/francisconeves97/jxscout/internal/modules/html-ingestion"
 	"github.com/francisconeves97/jxscout/internal/modules/ingestion"
 	jsingestion "github.com/francisconeves97/jxscout/internal/modules/js-ingestion"
+	monitoringmodule "github.com/francisconeves97/jxscout/internal/modules/monitoring"
+	"github.com/francisconeves97/jxscout/internal/modules/observability"
 	"github.com/francisconeves97/jxscout/internal/modules/optimizer"
 	"github.com/francisconeves97/jxscout/internal/modules/overrides"
 	"github.com/francisconeves97/jxscout/internal/modules/reporter"
@@ -96,7 +98,9 @@ func CheckAndMigrateOldVersion() error {
 			fmt.Println("\nDo you want to proceed with the migration? (y/n)")
 
 			var response string
-			fmt.Scanln(&response)
+			if _, err := fmt.Scanln(&response); err != nil {
+				return fmt.Errorf("migration requires confirmation but no input is available (running non-interactively?): %w", err)
+			}
 
 			if strings.ToLower(strings.TrimSpace(response)) != "y" {
 				return fmt.Errorf("migration aborted by user")
@@ -261,6 +265,8 @@ func (s *jxscout) registerCoreModules() {
 		findingsmodule.NewFindingsModule(),
 		hooksmodule.NewHooksModule(),
 		monitoringmodule.NewMonitoringModule(),
+		observability.NewModule(),
+		assetgraph.NewModule(),
 	}
 
 	for _, module := range coreModules {

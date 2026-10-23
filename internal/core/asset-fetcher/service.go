@@ -5,16 +5,52 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"strings"
+	"syscall"
 	"time"
 
 	"go.uber.org/ratelimit"
 
 	"github.com/francisconeves97/jxscout/internal/core/errutil"
 )
+
+// blockedFetchRanges are refused on connect. Link-local covers the cloud
+// metadata endpoints (169.254.169.254, fe80::/10), the usual SSRF pivot.
+// Loopback and RFC1918 stay reachable: scanning local/dev targets is the
+// normal use of this tool.
+var blockedFetchRanges = func() []*net.IPNet {
+	cidrs := []string{"169.254.0.0/16", "fe80::/10", "::/128"}
+	nets := make([]*net.IPNet, 0, len(cidrs))
+	for _, c := range cidrs {
+		_, n, err := net.ParseCIDR(c)
+		if err != nil {
+			panic(err)
+		}
+		nets = append(nets, n)
+	}
+	return nets
+}()
+
+func checkFetchAddress(address string) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return errutil.Wrap(err, "invalid dial address")
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return nil // not an IP (unix socket etc.)
+	}
+	for _, n := range blockedFetchRanges {
+		if n.Contains(ip) {
+			return fmt.Errorf("refusing to fetch link-local address %s", ip)
+		}
+	}
+	return nil
+}
 
 type AssetFetcher interface {
 	RateLimitedGet(ctx context.Context, url string, headers map[string]string) (string, bool, error)
@@ -32,13 +68,19 @@ type AssetFetcherOptions struct {
 }
 
 func NewAssetFetcher(options AssetFetcherOptions) *assetFetcherImpl {
-	// taken from https://github.com/sweetbbak/go-cloudflare-bypass
-	tlsConfig := http.DefaultTransport.(*http.Transport).TLSClientConfig
+	// Control runs on the resolved address right before connect, so it also
+	// catches DNS names pointing at link-local.
+	dialer := &net.Dialer{
+		Control: func(network, address string, _ syscall.RawConn) error {
+			return checkFetchAddress(address)
+		},
+	}
 
 	c := &http.Client{
 		Transport: &http.Transport{
 			TLSHandshakeTimeout: 30 * time.Second,
 			DisableKeepAlives:   false,
+			DialContext:         dialer.DialContext,
 
 			TLSClientConfig: &tls.Config{
 				CipherSuites: []uint16{
@@ -51,8 +93,11 @@ func NewAssetFetcher(options AssetFetcherOptions) *assetFetcherImpl {
 				},
 				InsecureSkipVerify: true, // Disable certificate verification
 			},
-			DialTLS: func(network, addr string) (net.Conn, error) {
-				return tls.Dial(network, addr, tlsConfig)
+			DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return (&tls.Dialer{
+					NetDialer: dialer,
+					Config:    &tls.Config{InsecureSkipVerify: true},
+				}).DialContext(ctx, network, addr)
 			},
 		},
 	}

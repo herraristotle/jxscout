@@ -490,35 +490,66 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to stat path: %w", err)
 	}
 
+	// Resolve source path to absolute, following symlinks
+	resolvedSourcePath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return fmt.Errorf("failed to resolve source path: %w", err)
+	}
+
 	files := []string{}
 
 	if info.IsDir() {
 		if recursive {
-			err = filepath.Walk(path, func(fp string, fi os.FileInfo, err error) error {
+			err = filepath.Walk(resolvedSourcePath, func(fp string, fi os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
 				if !fi.IsDir() && hasExtension(fp, extensions) {
-					files = append(files, fp)
+					// Resolve each file to handle symlinks within the tree
+					resolvedFp, err := filepath.EvalSymlinks(fp)
+					if err != nil {
+						return fmt.Errorf("failed to resolve file path %s: %w", fp, err)
+					}
+					// Verify resolved path is still within source directory
+					if !isSubpath(resolvedFp, resolvedSourcePath) {
+						return fmt.Errorf("symlink escape detected: %s resolves outside source directory", fp)
+					}
+					files = append(files, resolvedFp)
 				}
 				return nil
 			})
 		} else {
-			entries, err := os.ReadDir(path)
+			entries, err := os.ReadDir(resolvedSourcePath)
 			if err != nil {
 				return fmt.Errorf("failed to read directory: %w", err)
 			}
 			for _, entry := range entries {
 				if !entry.IsDir() {
-					fp := filepath.Join(path, entry.Name())
+					fp := filepath.Join(resolvedSourcePath, entry.Name())
 					if hasExtension(fp, extensions) {
-						files = append(files, fp)
+						resolvedFp, err := filepath.EvalSymlinks(fp)
+						if err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: failed to resolve %s: %v\n", fp, err)
+							continue
+						}
+						if !isSubpath(resolvedFp, resolvedSourcePath) {
+							fmt.Fprintf(os.Stderr, "Warning: symlink escape detected: %s\n", fp)
+							continue
+						}
+						files = append(files, resolvedFp)
 					}
 				}
 			}
 		}
 	} else {
-		files = append(files, path)
+		resolvedFile, err := filepath.EvalSymlinks(resolvedSourcePath)
+		if err != nil {
+			return fmt.Errorf("failed to resolve file path: %w", err)
+		}
+		if !isSubpath(resolvedFile, filepath.Dir(resolvedSourcePath)) {
+			return fmt.Errorf("symlink escape detected: %s", resolvedSourcePath)
+		}
+		files = append(files, resolvedFile)
 	}
 
 	if err != nil {
@@ -541,6 +572,12 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create ingest directory: %w", err)
 	}
 
+	// Resolve ingest directory to absolute path for validation
+	resolvedIngestDir, err := filepath.EvalSymlinks(ingestDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve ingest directory: %w", err)
+	}
+
 	ingested := 0
 	for i, file := range files {
 		content, err := os.ReadFile(file)
@@ -549,9 +586,15 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		relPath, _ := filepath.Rel(path, file)
-		if relPath == "" || strings.HasPrefix(relPath, "..") {
-			relPath = filepath.Base(file)
+		relPath, err := filepath.Rel(resolvedSourcePath, file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to compute relative path for %s: %v\n", file, err)
+			continue
+		}
+		// Double-check: ensure no path traversal
+		if strings.HasPrefix(relPath, "..") {
+			fmt.Fprintf(os.Stderr, "Warning: path traversal detected for %s, skipping\n", file)
+			continue
 		}
 
 		fakeURL := fmt.Sprintf("file://localhost/%s", strings.ReplaceAll(relPath, "\\", "/"))
@@ -563,7 +606,13 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		destPath := filepath.Join(ingestDir, "localhost", relPath)
+		destPath := filepath.Join(resolvedIngestDir, "localhost", relPath)
+		// Final validation: ensure destination is within ingest directory
+		if !isSubpath(destPath, resolvedIngestDir) {
+			fmt.Fprintf(os.Stderr, "Warning: destination path escapes ingest directory: %s\n", destPath)
+			continue
+		}
+
 		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to create directory for %s: %v\n", destPath, err)
 			continue
@@ -612,6 +661,22 @@ func runFsIngest(cmd *cobra.Command, args []string) error {
 	fmt.Println("Run jxscout proxy (or wait for background workers if already running) to analyze.")
 
 	return nil
+}
+
+// isSubpath checks if child is within parent directory (both must be absolute, clean paths)
+func isSubpath(child, parent string) bool {
+	// Ensure both are clean
+	child = filepath.Clean(child)
+	parent = filepath.Clean(parent)
+
+	// If child equals parent, it's valid
+	if child == parent {
+		return true
+	}
+
+	// Check if child starts with parent + separator
+	prefix := parent + string(filepath.Separator)
+	return strings.HasPrefix(child, prefix)
 }
 
 func hasExtension(path string, exts []string) bool {
