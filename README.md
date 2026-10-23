@@ -38,7 +38,7 @@ platform and verifies its SHA-256 checksum:
 
 ```bash
 # Linux / macOS — installs to ~/.local/bin (override: JXSCOUT_INSTALL_DIR)
-curl -fsSL https://github.com/herraristotle/jxscout/releases/latest/download/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/herraristotle/jxscout/main/install.sh | sh
 ```
 
 ```powershell

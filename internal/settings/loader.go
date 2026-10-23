@@ -3,6 +3,7 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,18 +92,29 @@ func (s *SettingsLoader) loadTier(path string) (map[string]interface{}, error) {
 	return result, nil
 }
 
+// schemaFileURL returns a valid file:// URL for path p, handling Windows
+// drive letters (e.g. "C:\..." -> file:///C:/...).
+func schemaFileURL(p string) string {
+	p = strings.ReplaceAll(p, "\\", "/")
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	u := &url.URL{Scheme: "file", Host: "", Path: p}
+	return u.String()
+}
+
 func (s *SettingsLoader) loadSchema() (*gojsonschema.Schema, error) {
 	// Check for project-specific schema first
 	projectSchemaPath := filepath.Join(common.GetPrivateDirectory(s.projectName), "settings.schema.json")
 	if _, err := os.Stat(projectSchemaPath); err == nil {
-		loader := gojsonschema.NewReferenceLoader("file://" + projectSchemaPath)
+		loader := gojsonschema.NewReferenceLoader(schemaFileURL(projectSchemaPath))
 		return gojsonschema.NewSchema(loader)
 	}
 
 	// Check global schema
 	globalSchemaPath := filepath.Join(os.Getenv("HOME"), ".jxscout", "settings.schema.json")
 	if _, err := os.Stat(globalSchemaPath); err == nil {
-		loader := gojsonschema.NewReferenceLoader("file://" + globalSchemaPath)
+		loader := gojsonschema.NewReferenceLoader(schemaFileURL(globalSchemaPath))
 		return gojsonschema.NewSchema(loader)
 	}
 
@@ -113,7 +125,7 @@ func (s *SettingsLoader) loadSchema() (*gojsonschema.Schema, error) {
 
 	// Try again after creation
 	if _, err := os.Stat(globalSchemaPath); err == nil {
-		loader := gojsonschema.NewReferenceLoader("file://" + globalSchemaPath)
+		loader := gojsonschema.NewReferenceLoader(schemaFileURL(globalSchemaPath))
 		return gojsonschema.NewSchema(loader)
 	}
 
