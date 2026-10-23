@@ -10,7 +10,7 @@ This is the **Modern OSS Edition** — a clean-room upgrade of the original open
 - **Chunks Pre-Fetching**: Detects and pre-fetches Webpack and Vite chunks for comprehensive analysis.
 - **Code Beautification**: Automatically beautifies JavaScript files, making them easier to read and analyze.
 - **Source Map Discovery**: Automatically reverses application source code if .map files are available.
-- **AST Analysis**: Automatically analyzes JavaScript files finding interesting functionality for vulnerability researchers. See [VSCode Extension](https://github.com/francisconeves97/jxscout-vscode) to learn how to install the extension.
+- **AST Analysis**: Automatically analyzes JavaScript files finding interesting functionality for vulnerability researchers. See [VSCode Extension](https://github.com/herraristotle/jxscout-vscode) to learn how to install the extension.
 
 ## Demo
 
@@ -27,10 +27,10 @@ https://github.com/user-attachments/assets/64f161c3-46b0-41a9-8b34-706cc795a034
 
 ### Part 1. Installing the CLI
 
-The first step to get up and running with jxscout is to install the CLI. To do that, just run the command below or download a pre-compiled binary from the [release page](https://github.com/francisconeves97/jxscout/releases).
+The first step to get up and running with jxscout is to install the CLI. To do that, just run the command below or download a pre-compiled binary from the [release page](https://github.com/herraristotle/jxscout/releases).
 
 ```
-go install github.com/francisconeves97/jxscout/cmd/jxscout@latest
+go install github.com/herraristotle/jxscout/cmd/jxscout@latest
 ```
 
 Or use the install script, which downloads the right release archive for your
@@ -38,12 +38,12 @@ platform and verifies its SHA-256 checksum:
 
 ```bash
 # Linux / macOS — installs to ~/.local/bin (override: JXSCOUT_INSTALL_DIR)
-curl -fsSL https://github.com/francisconeves97/jxscout/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/herraristotle/jxscout/releases/latest/download/install.sh | sh
 ```
 
 ```powershell
 # Windows — installs to %LOCALAPPDATA%\jxscout\bin and updates the user PATH
-irm https://raw.githubusercontent.com/francisconeves97/jxscout/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/herraristotle/jxscout/main/install.ps1 | iex
 ```
 
 Pin a version with `JXSCOUT_VERSION=1.2.3` (or `$env:JXSCOUT_VERSION`) and point
@@ -57,8 +57,8 @@ The jxscout CLI has a prompt with many commands, one of them is `install` which 
 
 jxscout will only start capturing assets after you setup your proxy to forward requests to it. To do that, you should install the right plugin for your proxy:
 
-- For Caido users: Check out https://github.com/francisconeves97/jxscout-caido
-- For Burp users: Check out https://github.com/francisconeves97/jxscout-burp
+- For Caido users: Check out https://github.com/herraristotle/jxscout-caido
+- For Burp users: Check out https://github.com/herraristotle/jxscout-burp
 
 After you install the proxy plugin, every asset that flows through your proxy should be automatically saved to your `~/jxscout` folder.
 
@@ -72,7 +72,7 @@ The VSCode extension is a frontend for jxscout. It allows you to visualize the A
 
 ![jxscout](docs/vscode.png)
 
-To get started with the VSCode Extension head over to https://github.com/francisconeves97/jxscout-vscode for more instructions.
+To get started with the VSCode Extension head over to https://github.com/herraristotle/jxscout-vscode for more instructions.
 
 You can check the structure of the analysis tree on [docs/tree.md](./docs/tree.md) to get a picture of what descriptors you will get.
 

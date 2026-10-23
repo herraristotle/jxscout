@@ -2,7 +2,7 @@
 .SYNOPSIS
   jxscout installer for Windows.
 .EXAMPLE
-  irm https://raw.githubusercontent.com/francisconeves97/jxscout/main/install.ps1 | iex
+  irm https://raw.githubusercontent.com/herraristotle/jxscout/main/install.ps1 | iex
 #>
 [CmdletBinding()]
 param(
@@ -11,7 +11,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repo = if ($env:JXSCOUT_REPO) { $env:JXSCOUT_REPO } else { 'francisconeves97/jxscout' }
+$repo = if ($env:JXSCOUT_REPO) { $env:JXSCOUT_REPO } else { 'herraristotle/jxscout' }
 
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' }
 

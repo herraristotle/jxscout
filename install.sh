@@ -3,7 +3,7 @@
 # $JXSCOUT_INSTALL_DIR (default: ~/.local/bin) and verifies its checksum.
 set -eu
 
-REPO="${JXSCOUT_REPO:-francisconeves97/jxscout}"
+REPO="${JXSCOUT_REPO:-herraristotle/jxscout}"
 VERSION="${JXSCOUT_VERSION:-latest}"
 DEST="${JXSCOUT_INSTALL_DIR:-$HOME/.local/bin}"
 
