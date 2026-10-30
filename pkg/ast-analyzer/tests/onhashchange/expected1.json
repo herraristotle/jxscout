@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/onhashchange/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "onhashchange",
     "value": "window.addEventListener(\"hashchange\", function() {\n  console.log(\"Hash changed via addEventListener!\");\n})",
     "start": {
@@ -12,11 +12,12 @@
       "column": 2
     },
     "tags": {
-      "onhashchange": true
+      "onhashchange": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/onhashchange/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "onhashchange",
     "value": "window.onhashchange = function() {\n  console.log(\"First handler\");\n}",
     "start": {
@@ -28,11 +29,12 @@
       "column": 1
     },
     "tags": {
-      "onhashchange": true
+      "onhashchange": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/onhashchange/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "onhashchange",
     "value": "window.onhashchange = function() {\n  console.log(\"Hash changed!\");\n}",
     "start": {
@@ -44,11 +46,12 @@
       "column": 1
     },
     "tags": {
-      "onhashchange": true
+      "onhashchange": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/onhashchange/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "onhashchange",
     "value": "window.onhashchange = function() {\n  console.log(\"Second handler\");\n}",
     "start": {
@@ -60,11 +63,12 @@
       "column": 1
     },
     "tags": {
-      "onhashchange": true
+      "onhashchange": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/onhashchange/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "onhashchange",
     "value": "window.onhashchange = handler",
     "start": {
@@ -76,7 +80,8 @@
       "column": 29
     },
     "tags": {
-      "onhashchange": true
+      "onhashchange": true,
+      "file-category-app": true
     }
   }
 ]

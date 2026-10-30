@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'123domain.com'",
     "start": {
@@ -12,14 +12,15 @@
       "column": 31
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "123domain.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'a1-b2-c3.example.com'",
     "start": {
@@ -31,14 +32,15 @@
       "column": 38
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "a1-b2-c3.example.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'domain123.com'",
     "start": {
@@ -50,14 +52,15 @@
       "column": 31
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "domain123.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'example.com'",
     "start": {
@@ -69,14 +72,15 @@
       "column": 29
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "example.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'example.io'",
     "start": {
@@ -88,14 +92,15 @@
       "column": 29
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "example.io"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'example.net'",
     "start": {
@@ -107,14 +112,15 @@
       "column": 30
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "example.net"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'example.org'",
     "start": {
@@ -126,14 +132,15 @@
       "column": 30
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "example.org"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'my-domain.com'",
     "start": {
@@ -145,14 +152,15 @@
       "column": 31
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "my-domain.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'sub-domain.example.com'",
     "start": {
@@ -164,14 +172,15 @@
       "column": 40
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "sub-domain.example.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'sub.example.com'",
     "start": {
@@ -183,14 +192,15 @@
       "column": 33
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "sub.example.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'sub.sub.example.com'",
     "start": {
@@ -202,14 +212,15 @@
       "column": 37
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "sub.sub.example.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'sub123.example.com'",
     "start": {
@@ -221,14 +232,15 @@
       "column": 36
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "sub123.example.com"
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/hostname/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "hostname",
     "value": "'test-123.example.com'",
     "start": {
@@ -240,7 +252,8 @@
       "column": 39
     },
     "tags": {
-      "hostname-string": true
+      "hostname-string": true,
+      "file-category-app": true
     },
     "extra": {
       "hostname": "test-123.example.com"

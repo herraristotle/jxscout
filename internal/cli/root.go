@@ -291,15 +291,21 @@ var queryCmd = &cobra.Command{
 }
 
 var (
-	queryType string
-	assetURL  string
-	limit     int
+	queryType          string
+	assetURL           string
+	limit              int
+	queryFileCategory  string
+	queryMinConfidence string
+	queryAnalyzer      string
 )
 
 func init() {
 	queryCmd.Flags().StringVarP(&queryType, "type", "t", "assets", "query type: assets, descriptors, findings")
 	queryCmd.Flags().StringVarP(&assetURL, "url", "", "", "filter by asset URL (exact match)")
 	queryCmd.Flags().IntVarP(&limit, "limit", "l", 100, "limit results")
+	queryCmd.Flags().StringVarP(&queryFileCategory, "file-category", "", "", "descriptors only: filter by file-category tag (app|vendor|inline)")
+	queryCmd.Flags().StringVarP(&queryMinConfidence, "min-confidence", "", "", "descriptors only: minimum extra.confidence (high|medium|low|info)")
+	queryCmd.Flags().StringVarP(&queryAnalyzer, "analyzer", "", "", "descriptors only: filter by analyzerName")
 	rootCmd.AddCommand(queryCmd)
 }
 
@@ -360,6 +366,38 @@ func queryAssets(ctx context.Context, db *sqlx.DB) error {
 	return json.NewEncoder(os.Stdout).Encode(assets)
 }
 
+// descriptorPassesFilters applies the optional post-match filters for the
+// descriptors query: --file-category (tag), --min-confidence (extra), and
+// --analyzer (analyzerName).
+func descriptorPassesFilters(descriptor map[string]interface{}) bool {
+	if queryAnalyzer != "" {
+		if name, _ := descriptor["analyzerName"].(string); name != queryAnalyzer {
+			return false
+		}
+	}
+
+	if queryFileCategory != "" {
+		tags, _ := descriptor["tags"].(map[string]interface{})
+		tagged := false
+		if tags != nil {
+			_, tagged = tags["file-category-"+queryFileCategory].(bool)
+		}
+		if !tagged {
+			return false
+		}
+	}
+
+	if queryMinConfidence != "" {
+		extra, _ := descriptor["extra"].(map[string]interface{})
+		confidence, _ := extra["confidence"].(string)
+		if !findings.ConfidenceSatisfiesMin(confidence, queryMinConfidence) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func queryDescriptors(ctx context.Context, db *sqlx.DB) error {
 	query := `
 		SELECT a.url, aa.results
@@ -400,7 +438,19 @@ func queryDescriptors(ctx context.Context, db *sqlx.DB) error {
 			continue
 		}
 
-		results = append(results, Result{URL: url, Descriptors: descriptors})
+		filtered := make([]map[string]interface{}, 0, len(descriptors))
+		for _, d := range descriptors {
+			if descriptorPassesFilters(d) {
+				filtered = append(filtered, d)
+			}
+		}
+
+		// Assets whose descriptors are all filtered out drop out entirely.
+		if len(filtered) == 0 {
+			continue
+		}
+
+		results = append(results, Result{URL: url, Descriptors: filtered})
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(results)

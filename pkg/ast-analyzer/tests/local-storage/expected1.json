@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "localStorage.getItem('key')",
     "start": {
@@ -13,11 +13,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "localStorage.setItem('key', 'value')",
     "start": {
@@ -30,11 +31,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.getItem('data')",
     "start": {
@@ -47,11 +49,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.getItem('key')",
     "start": {
@@ -64,11 +67,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.getItem('user')",
     "start": {
@@ -81,11 +85,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.getItem(`${prefix}name`)",
     "start": {
@@ -98,11 +103,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.getItem(key)",
     "start": {
@@ -115,11 +121,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.setItem('backup', data)",
     "start": {
@@ -132,11 +139,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.setItem('key', 'value')",
     "start": {
@@ -149,11 +157,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.setItem('user', JSON.stringify(user))",
     "start": {
@@ -166,11 +175,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.setItem(`${prefix}name`, 'John')",
     "start": {
@@ -183,11 +193,12 @@
     },
     "tags": {
       "local-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/local-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "local-storage",
     "value": "window.localStorage.setItem(key, value)",
     "start": {
@@ -200,7 +211,8 @@
     },
     "tags": {
       "local-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   }
 ]

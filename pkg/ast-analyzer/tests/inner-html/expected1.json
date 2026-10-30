@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "container1.innerHTML = '<div>First container</div>'",
     "start": {
@@ -12,11 +12,12 @@
       "column": 51
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "container2.innerHTML = '<div>Second container</div>'",
     "start": {
@@ -28,11 +29,12 @@
       "column": 52
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "div.innerHTML = '<p>Function content</p>'",
     "start": {
@@ -44,11 +46,12 @@
       "column": 43
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "document.getElementById('container').innerHTML = '<div>Hello World</div>'",
     "start": {
@@ -60,11 +63,12 @@
       "column": 73
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "document.getElementById('greeting').innerHTML = `<h1>Welcome ${name}</h1>`",
     "start": {
@@ -76,11 +80,12 @@
       "column": 74
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "document.getElementById('result').innerHTML = '<p>Button clicked!</p>'",
     "start": {
@@ -92,11 +97,12 @@
       "column": 72
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "element.innerHTML = '<span>Dynamic content</span>'",
     "start": {
@@ -108,11 +114,12 @@
       "column": 50
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/inner-html/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "inner-html",
     "value": "obj.element.innerHTML = '<div>Nested access</div>'",
     "start": {
@@ -124,7 +131,8 @@
       "column": 50
     },
     "tags": {
-      "inner-html": true
+      "inner-html": true,
+      "file-category-app": true
     }
   }
 ]

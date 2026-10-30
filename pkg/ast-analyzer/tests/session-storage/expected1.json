@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/session-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "session-storage",
     "value": "sessionStorage.getItem('key')",
     "start": {
@@ -13,11 +13,12 @@
     },
     "tags": {
       "session-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/session-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "session-storage",
     "value": "sessionStorage.setItem('key', 'value')",
     "start": {
@@ -30,11 +31,12 @@
     },
     "tags": {
       "session-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/session-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "session-storage",
     "value": "window.sessionStorage.getItem('key2')",
     "start": {
@@ -47,11 +49,12 @@
     },
     "tags": {
       "session-storage": true,
-      "property-getItem": true
+      "property-getItem": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/session-storage/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "session-storage",
     "value": "window.sessionStorage.setItem('key2', 'value2')",
     "start": {
@@ -64,7 +67,8 @@
     },
     "tags": {
       "session-storage": true,
-      "property-setItem": true
+      "property-setItem": true,
+      "file-category-app": true
     }
   }
 ]

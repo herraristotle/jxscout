@@ -161,6 +161,82 @@ func TestFormatMatchesV1Empty(t *testing.T) {
 	assert.Equal(t, 0, countMatchNodes(result))
 }
 
+// postmessage-origin-risk matches must surface under the postMessage node.
+func TestPostMessageOriginRiskSurfaced(t *testing.T) {
+	match := AnalyzerMatch{
+		FilePath:     "test.js",
+		AnalyzerName: "postmessage",
+		Value:        "window.postMessage('x')",
+		Tags:         map[string]bool{"postMessage": true, "postmessage-origin-risk": true},
+	}
+	result := formatMatchesV1([]AnalyzerMatch{match})
+
+	behavior := findNodeByLabel(result, "Client Behavior")
+	require.NotNil(t, behavior)
+	events := findNodeByLabel(behavior.Children, "Events")
+	require.NotNil(t, events)
+	postMessage := findNodeByLabel(events.Children, "postMessage")
+	require.NotNil(t, postMessage)
+
+	assert.Equal(t, []string{match.Value}, collectMatchValues(postMessage.Children))
+}
+
+// debug-flags matches must surface under a Debug Flags node in Client Behavior.
+func TestDebugFlagsSurfaced(t *testing.T) {
+	match := AnalyzerMatch{
+		FilePath:     "test.js",
+		AnalyzerName: "debug-flags",
+		Value:        "{ DEBUG: true }",
+		Tags:         map[string]bool{"debug-flag": true},
+	}
+	result := formatMatchesV1([]AnalyzerMatch{match})
+
+	behavior := findNodeByLabel(result, "Client Behavior")
+	require.NotNil(t, behavior)
+	flags := findNodeByLabel(behavior.Children, "Debug Flags")
+	require.NotNil(t, flags, "Debug Flags node missing")
+	assert.Equal(t, []string{match.Value}, collectMatchValues(flags.Children))
+}
+func TestSecretMatchTooltipCarriesConfidence(t *testing.T) {
+	match := AnalyzerMatch{
+		FilePath:     "test.go",
+		AnalyzerName: "test",
+		Value:        "sk_live_abc123",
+		Tags:         map[string]bool{"secret": true, "secret-type-stripe": true},
+		Extra:        map[string]any{"confidence": "high", "entropy": 5.2},
+	}
+	result := formatMatchesV1([]AnalyzerMatch{match})
+
+	secrets := findNodeByLabel(result, "Secrets")
+	require.NotNil(t, secrets, "secrets node missing")
+	stripe := findNodeByLabel(secrets.Children, "stripe")
+	require.NotNil(t, stripe, "secret-type node missing")
+
+	require.Len(t, stripe.Children, 1)
+	matchNode := stripe.Children[0]
+	assert.Contains(t, matchNode.Tooltip, "confidence: high")
+	assert.Contains(t, matchNode.Tooltip, "entropy: 5.2")
+}
+
+// Secrets without Extra (older bundled analyzer output) must not get a
+// tooltip or crash.
+func TestSecretMatchWithoutExtra(t *testing.T) {
+	match := AnalyzerMatch{
+		FilePath:     "test.go",
+		AnalyzerName: "test",
+		Value:        "sk_live_abc123",
+		Tags:         map[string]bool{"secret": true, "secret-type-stripe": true},
+	}
+	result := formatMatchesV1([]AnalyzerMatch{match})
+
+	secrets := findNodeByLabel(result, "Secrets")
+	require.NotNil(t, secrets)
+	stripe := findNodeByLabel(secrets.Children, "stripe")
+	require.NotNil(t, stripe)
+	require.Len(t, stripe.Children, 1)
+	assert.Empty(t, stripe.Children[0].Tooltip)
+}
+
 func TestFormatMatchesV1UnknownTagsIgnored(t *testing.T) {
 	result := formatMatchesV1([]AnalyzerMatch{
 		{FilePath: "test.go", AnalyzerName: "test", Value: "whatever", Tags: map[string]bool{"not-a-known-tag": true}},

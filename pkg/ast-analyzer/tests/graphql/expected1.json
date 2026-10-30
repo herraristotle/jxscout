@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/graphql/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "graphql",
     "value": "\n    query GetUserWithDirectives {\n        user(id: \"123\") @include(if: $shouldInclude) {\n            id\n            name @skip(if: $shouldSkip)\n        }\n    }\n",
     "start": {
@@ -13,11 +13,12 @@
     },
     "tags": {
       "graphql": true,
-      "graphql-query": true
+      "graphql-query": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/graphql/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "graphql",
     "value": "mutation CreateUser($input: CreateUserInput!) {\n  createUser(input: $input) {\n    id\n    name\n    email\n  }\n}",
     "start": {
@@ -30,11 +31,12 @@
     },
     "tags": {
       "graphql": true,
-      "graphql-mutation": true
+      "graphql-mutation": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/graphql/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "graphql",
     "value": "query GetProducts {\n  products {\n    id\n    name\n    price\n    ...ProductDetails\n  }\n}",
     "start": {
@@ -47,11 +49,12 @@
     },
     "tags": {
       "graphql": true,
-      "graphql-query": true
+      "graphql-query": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/graphql/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "graphql",
     "value": "query GetUser($id: ID!) {\n  user(id: $id) {\n    id\n    name\n    email\n  }\n}",
     "start": {
@@ -64,11 +67,12 @@
     },
     "tags": {
       "graphql": true,
-      "graphql-query": true
+      "graphql-query": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/graphql/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "graphql",
     "value": "query GetUserWithDirectives {\n  user(id: \"123\") @include(if: $shouldInclude) {\n    id\n    name @skip(if: $shouldSkip)\n  }\n}",
     "start": {
@@ -81,11 +85,12 @@
     },
     "tags": {
       "graphql": true,
-      "graphql-query": true
+      "graphql-query": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/graphql/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "graphql",
     "value": "type User { name: String }",
     "start": {
@@ -98,7 +103,8 @@
     },
     "tags": {
       "graphql": true,
-      "graphql-other": true
+      "graphql-other": true,
+      "file-category-app": true
     }
   }
 ]

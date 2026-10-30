@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.hash",
     "start": {
@@ -14,11 +14,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-hash": true
+      "property-hash": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.host",
     "start": {
@@ -32,11 +33,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-host": true
+      "property-host": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.host",
     "start": {
@@ -50,11 +52,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-host": true
+      "property-host": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href",
     "start": {
@@ -68,11 +71,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href",
     "start": {
@@ -86,11 +90,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = \"https://example.com\"",
     "start": {
@@ -104,11 +109,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = \"https://example.com\"",
     "start": {
@@ -122,11 +128,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = \"https://other.com\"",
     "start": {
@@ -140,11 +147,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = \"https://secure.com\"",
     "start": {
@@ -158,11 +166,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = \"https://upgrade.com\"",
     "start": {
@@ -176,11 +185,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = `https://example${i}.com`",
     "start": {
@@ -194,11 +204,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = url",
     "start": {
@@ -212,11 +223,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = url",
     "start": {
@@ -230,11 +242,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.href = url",
     "start": {
@@ -248,11 +261,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.pathname",
     "start": {
@@ -266,11 +280,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-pathname": true
+      "property-pathname": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.pathname",
     "start": {
@@ -284,11 +299,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-pathname": true
+      "property-pathname": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.protocol",
     "start": {
@@ -302,11 +318,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-protocol": true
+      "property-protocol": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.protocol",
     "start": {
@@ -320,11 +337,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-protocol": true
+      "property-protocol": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.protocol",
     "start": {
@@ -338,11 +356,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-protocol": true
+      "property-protocol": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "location.search",
     "start": {
@@ -356,11 +375,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-search": true
+      "property-search": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.hash",
     "start": {
@@ -374,11 +394,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-hash": true
+      "property-hash": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.host",
     "start": {
@@ -392,11 +413,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-host": true
+      "property-host": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.href",
     "start": {
@@ -410,11 +432,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.href = \"https://example.com\"",
     "start": {
@@ -428,11 +451,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.href = url",
     "start": {
@@ -446,11 +470,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.href = url",
     "start": {
@@ -464,11 +489,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.href = url",
     "start": {
@@ -482,11 +508,12 @@
     "tags": {
       "location": true,
       "location-assignment": true,
-      "property-href": true
+      "property-href": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.pathname",
     "start": {
@@ -500,11 +527,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-pathname": true
+      "property-pathname": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.protocol",
     "start": {
@@ -518,11 +546,12 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-protocol": true
+      "property-protocol": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/location/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "location",
     "value": "window.location.search",
     "start": {
@@ -536,7 +565,8 @@
     "tags": {
       "location": true,
       "location-read": true,
-      "property-search": true
+      "property-search": true,
+      "file-category-app": true
     }
   }
 ]

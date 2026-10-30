@@ -18,6 +18,33 @@ var validSeverities = map[string]bool{
 	"low": true, "medium": true, "high": true, "critical": true,
 }
 
+// ConfidenceTier orders secret-match confidence tiers (lower = more certain).
+// Unknown or missing confidence sorts last.
+func ConfidenceTier(c string) int {
+	switch c {
+	case "high":
+		return 0
+	case "medium":
+		return 1
+	case "low":
+		return 2
+	case "info":
+		return 3
+	default:
+		return 4
+	}
+}
+
+// ConfidenceSatisfiesMin reports whether a match's confidence meets the
+// caller's minimum. An unknown/missing confidence only satisfies an empty
+// (no-filter) minimum.
+func ConfidenceSatisfiesMin(confidence, min string) bool {
+	if min == "" {
+		return true
+	}
+	return ConfidenceTier(confidence) <= ConfidenceTier(min)
+}
+
 // Finding is a structured security finding (Pro v2 findings feature).
 type Finding struct {
 	ID          int64             `db:"id" json:"finding_id"`

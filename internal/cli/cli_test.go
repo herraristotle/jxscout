@@ -10,6 +10,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -72,12 +73,21 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 	return buf.String(), runErr
 }
 
+// pflag keeps a flag's value and Changed bit across Execute calls, and these
+// tests drive several invocations in one process: without a reset, a flag set by
+// an earlier one silently applies to the next. Only Changed flags are reset —
+// tests assign some package-level values (projectName) directly.
 func runRoot(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 
 	out := &bytes.Buffer{}
 	rootCmd.SetOut(out)
 	rootCmd.SetErr(out)
+
+	for _, fs := range []*pflag.FlagSet{rootCmd.PersistentFlags(), rootCmd.Flags(), queryCmd.Flags()} {
+		fs.VisitAll(resetFlag)
+	}
+
 	rootCmd.SetArgs(args)
 	t.Cleanup(func() {
 		rootCmd.SetArgs(nil)
@@ -85,6 +95,14 @@ func runRoot(t *testing.T, args ...string) (string, error) {
 
 	err := rootCmd.Execute()
 	return out.String(), err
+}
+
+func resetFlag(f *pflag.Flag) {
+	if !f.Changed {
+		return
+	}
+	_ = f.Value.Set(f.DefValue)
+	f.Changed = false
 }
 
 func TestWordlistPathsJSON(t *testing.T) {
@@ -139,4 +157,102 @@ func TestPrintFullSettings(t *testing.T) {
 
 	assert.Contains(t, out, "\"server\"")
 	assert.Contains(t, out, "\"hostname\"")
+}
+
+// Fixture with descriptors carrying analyzerName, tags (incl. file-category-*)
+// and extra.confidence, to exercise the query command's filters. The fixture
+// rows are written inline in each test after newTestProject.
+
+func TestQueryDescriptorsByFileCategory(t *testing.T) {
+	private := newTestProject(t, "p")
+	db, err := sqlx.Open("sqlite3", filepath.Join(private, "db.sql"))
+	require.NoError(t, err)
+	defer db.Close()
+
+	results := `[{"filePath":"app.js","analyzerName":"secrets","value":"AKIA12345",
+		"tags":{"secret":true,"secret-type-aws-api-key":true,"file-category-app":true},
+		"extra":{"confidence":"high","entropy":5.0}},
+		{"filePath":"vendor.js","analyzerName":"secrets","value":"AKIA99990",
+		"tags":{"secret":true,"secret-type-generic":true,"file-category-vendor":true},
+		"extra":{"confidence":"low","entropy":2.0}}]`
+	_, err = db.Exec(`UPDATE ast_analysis_results SET results = ? WHERE asset_id = 2`, results)
+	require.NoError(t, err)
+	db.Close()
+
+	projectName = "p"
+
+	// app filter keeps only the app match
+	out, err := captureStdout(t, func() error {
+		_, err := runRoot(t, "query", "-t", "descriptors", "--file-category", "app")
+		return err
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "AKIA12345")
+	assert.NotContains(t, out, "AKIA99990")
+
+	// vendor filter keeps only the vendor match
+	out, err = captureStdout(t, func() error {
+		_, err := runRoot(t, "query", "-t", "descriptors", "--file-category", "vendor")
+		return err
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "AKIA99990")
+	assert.NotContains(t, out, "AKIA12345")
+
+	// no filter keeps both
+	out, err = captureStdout(t, func() error {
+		_, err := runRoot(t, "query", "-t", "descriptors")
+		return err
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "AKIA12345")
+	assert.Contains(t, out, "AKIA99990")
+}
+
+func TestQueryDescriptorsByConfidence(t *testing.T) {
+	private := newTestProject(t, "p")
+	db, err := sqlx.Open("sqlite3", filepath.Join(private, "db.sql"))
+	require.NoError(t, err)
+	defer db.Close()
+
+	results := `[{"filePath":"app.js","analyzerName":"secrets","value":"AKIAHIGH1",
+		"tags":{"secret":true},"extra":{"confidence":"high"}},
+		{"filePath":"app.js","analyzerName":"secrets","value":"AKIALOW000",
+		"tags":{"secret":true},"extra":{"confidence":"low"}}]`
+	_, err = db.Exec(`UPDATE ast_analysis_results SET results = ? WHERE asset_id = 2`, results)
+	require.NoError(t, err)
+	db.Close()
+
+	projectName = "p"
+
+	out, err := captureStdout(t, func() error {
+		_, err := runRoot(t, "query", "-t", "descriptors", "--min-confidence", "high")
+		return err
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "AKIAHIGH1")
+	assert.NotContains(t, out, "AKIALOW000")
+}
+
+func TestQueryDescriptorsByAnalyzer(t *testing.T) {
+	private := newTestProject(t, "p")
+	db, err := sqlx.Open("sqlite3", filepath.Join(private, "db.sql"))
+	require.NoError(t, err)
+	defer db.Close()
+
+	results := `[{"filePath":"app.js","analyzerName":"secrets","value":"AKIA12345","tags":{"secret":true}},
+		{"filePath":"app.js","analyzerName":"eval","value":"eval(x)","tags":{"eval":true}}]`
+	_, err = db.Exec(`UPDATE ast_analysis_results SET results = ? WHERE asset_id = 2`, results)
+	require.NoError(t, err)
+	db.Close()
+
+	projectName = "p"
+
+	out, err := captureStdout(t, func() error {
+		_, err := runRoot(t, "query", "-t", "descriptors", "--analyzer", "eval")
+		return err
+	})
+	require.NoError(t, err)
+	assert.Contains(t, out, "eval(x)")
+	assert.NotContains(t, out, "AKIA12345")
 }

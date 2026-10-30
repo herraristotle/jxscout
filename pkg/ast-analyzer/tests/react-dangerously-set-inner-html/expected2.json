@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "{\n    dangerouslySetInnerHTML: {\n      __html: '<div>Content from spread props</div>'\n    }\n  }",
     "start": {
@@ -12,11 +12,12 @@
       "column": 3
     },
     "tags": {
-      "dangerouslySetInnerHTML-object": true
+      "dangerouslySetInnerHTML-object": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div \n      className=\"content\"\n      dangerouslySetInnerHTML={{ __html: '<div>Content with other props</div>' }}\n      onClick={() => console.log('clicked')}\n    />",
     "start": {
@@ -28,11 +29,12 @@
       "column": 6
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ \n      __html: isAdmin ? '<div>Admin content</div>' : '<div>User content</div>' \n    }} />",
     "start": {
@@ -44,11 +46,12 @@
       "column": 9
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ __html: '<div>Nested content</div>' }} />",
     "start": {
@@ -60,11 +63,12 @@
       "column": 77
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ __html: '<p>Conditional content</p>' }} />",
     "start": {
@@ -76,11 +80,12 @@
       "column": 78
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ __html: '<p>First content</p>' }} />",
     "start": {
@@ -92,11 +97,12 @@
       "column": 74
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ __html: '<span>Hello World</span>' }} />",
     "start": {
@@ -108,11 +114,12 @@
       "column": 76
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ __html: `<p>Hello ${name}</p>` }} />",
     "start": {
@@ -124,11 +131,12 @@
       "column": 72
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ __html: content }} />",
     "start": {
@@ -140,11 +148,12 @@
       "column": 57
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<div dangerouslySetInnerHTML={{ __html: getContent() }} />",
     "start": {
@@ -156,11 +165,12 @@
       "column": 62
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/react-dangerously-set-inner-html/files/1.jsx",
+    "filePath": "1.jsx",
     "analyzerName": "dangerouslySetInnerHTML",
     "value": "<span dangerouslySetInnerHTML={{ __html: '<strong>Second content</strong>' }} />",
     "start": {
@@ -172,7 +182,8 @@
       "column": 86
     },
     "tags": {
-      "dangerouslySetInnerHTML-jsx": true
+      "dangerouslySetInnerHTML-jsx": true,
+      "file-category-app": true
     }
   }
 ]

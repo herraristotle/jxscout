@@ -43,13 +43,17 @@ export function createBaseTest(
       `expected${number}.json`
     );
 
-    if (!fs.existsSync(expectedPath)) {
+    if (!fs.existsSync(expectedPath) || process.env.REGEN_SNAPSHOT === "1") {
+      // Write the normalized form: a committed snapshot must not embed the
+      // absolute path of whichever machine regenerated it. The comparison below
+      // is already basename-only, so this keeps the fixture and the assertion
+      // in agreement without touching what the analyzer reports.
       const outputPath = path.join(
         __dirname,
         testType,
         `expected${number}.json`
       );
-      fs.writeFileSync(outputPath, JSON.stringify(sortedResults, null, 2));
+      fs.writeFileSync(outputPath, JSON.stringify(normalizedResults, null, 2));
     }
 
     expect(normalizedResults).toEqual(normalizedExpected);
@@ -63,7 +67,7 @@ export function loadExpectedResults(
   const expectedPath = path.join(__dirname, testType, `expected${number}.json`);
 
   try {
-    if (!fs.existsSync(expectedPath)) {
+    if (!fs.existsSync(expectedPath) || process.env.REGEN_SNAPSHOT === "1") {
       console.warn(`Expected results file not found: ${expectedPath}`);
       return [];
     }

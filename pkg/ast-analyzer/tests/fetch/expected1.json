@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch",
     "value": "fetch('https://api.example.com/data', {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({ key: 'value' })\n})",
     "start": {
@@ -12,11 +12,12 @@
       "column": 2
     },
     "tags": {
-      "fetch-call": true
+      "fetch-call": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch",
     "value": "fetch('https://api.example.com/data')",
     "start": {
@@ -28,11 +29,12 @@
       "column": 37
     },
     "tags": {
-      "fetch-call": true
+      "fetch-call": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch",
     "value": "fetch('https://api.example.com/data')",
     "start": {
@@ -44,11 +46,12 @@
       "column": 62
     },
     "tags": {
-      "fetch-call": true
+      "fetch-call": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch",
     "value": "fetch(`https://api.example.com/${endpoint}`)",
     "start": {
@@ -60,11 +63,12 @@
       "column": 44
     },
     "tags": {
-      "fetch-call": true
+      "fetch-call": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch",
     "value": "fetch(url)",
     "start": {
@@ -76,7 +80,8 @@
       "column": 10
     },
     "tags": {
-      "fetch-call": true
+      "fetch-call": true,
+      "file-category-app": true
     }
   }
 ]

@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/url-search-params/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "url-search-params",
     "value": "new URLSearchParams('?query=value')",
     "start": {
@@ -12,11 +12,12 @@
       "column": 51
     },
     "tags": {
-      "url-search-params": true
+      "url-search-params": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/url-search-params/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "url-search-params",
     "value": "new URLSearchParams([['key', 'value']])",
     "start": {
@@ -28,11 +29,12 @@
       "column": 55
     },
     "tags": {
-      "url-search-params": true
+      "url-search-params": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/url-search-params/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "url-search-params",
     "value": "new URLSearchParams({ key: 'value' })",
     "start": {
@@ -44,7 +46,8 @@
       "column": 53
     },
     "tags": {
-      "url-search-params": true
+      "url-search-params": true,
+      "file-category-app": true
     }
   }
 ]

@@ -1,6 +1,7 @@
 import fs from "fs";
 import { ParseResult, parseSync } from "oxc-parser";
 import { ancestors as traverse } from "./walker";
+import { classifyFileName } from "./classifier";
 import { AnalyzerParams, AnalyzerMatch } from "./types";
 import { regexAnalyzerBuilder } from "./tree-analyzers/regex-pattern";
 import { graphqlAnalyzerBuilder } from "./tree-analyzers/graphql";
@@ -27,6 +28,14 @@ import { windowOpenAnalyzerBuilder } from "./tree-analyzers/window-open";
 import { dangerousHtmlAnalyzerBuilder } from "./tree-analyzers/react-dangerously-set-inner-html";
 import { httpMethodsAnalyzerBuilder } from "./tree-analyzers/http-methods";
 import { dependencyConfusionAnalyzerBuilder } from "./tree-analyzers/dependency-confusion";
+import {
+  sensitiveAssignmentAnalyzerBuilder,
+  configObjectAnalyzerBuilder,
+  envFallbackAnalyzerBuilder,
+  authHeaderAnalyzerBuilder,
+} from "./tree-analyzers/sensitive-data";
+import { originReadAnalyzerBuilder } from "./tree-analyzers/origin-reader";
+import { debugFlagsAnalyzerBuilder } from "./tree-analyzers/debug-flags";
 
 export function parseFile(filePath: string): AnalyzerParams {
   const fileContent = fs.readFileSync(filePath, "utf-8");
@@ -101,7 +110,13 @@ export type AnalyzerType =
   | "window-open"
   | "dangerous-html"
   | "http-methods"
-  | "dependency-confusion";
+  | "dependency-confusion"
+  | "sensitive-assignment"
+  | "config-object"
+  | "env-fallback"
+  | "auth-header"
+  | "origin-read"
+  | "debug-flags";
 
 export function analyzeFile(
   filePath: string,
@@ -113,6 +128,11 @@ export function analyzeFile(
 
   const results: AnalyzerMatch[] = [];
   const args = parseFile(filePath);
+
+  // Every match carries the file's vendor/app/inline classification so
+  // consumers (VSCode tree, MCP, agents) can filter first-party code
+  // vs third-party bundles without re-reading the file name.
+  const fileCategory = classifyFileName(filePath);
 
   const createAnalyzer = <T extends { [key: string]: any }>(
     type: AnalyzerType,
@@ -201,6 +221,30 @@ export function analyzeFile(
     "dependency-confusion",
     dependencyConfusionAnalyzerBuilder
   );
+  const sensitiveAssignmentAnalyzer = createAnalyzer(
+    "sensitive-assignment",
+    sensitiveAssignmentAnalyzerBuilder
+  );
+  const configObjectAnalyzer = createAnalyzer(
+    "config-object",
+    configObjectAnalyzerBuilder
+  );
+  const envFallbackAnalyzer = createAnalyzer(
+    "env-fallback",
+    envFallbackAnalyzerBuilder
+  );
+  const authHeaderAnalyzer = createAnalyzer(
+    "auth-header",
+    authHeaderAnalyzerBuilder
+  );
+  const originReadAnalyzer = createAnalyzer(
+    "origin-read",
+    originReadAnalyzerBuilder
+  );
+  const debugFlagsAnalyzer = createAnalyzer(
+    "debug-flags",
+    debugFlagsAnalyzerBuilder
+  );
 
   traverse(args.source, args.ast, {
     Literal(node, ancestors) {
@@ -268,13 +312,27 @@ export function analyzeFile(
       sessionStorageAnalyzer?.MemberExpression?.(node, ancestors);
       locationAnalyzer?.MemberExpression?.(node, ancestors);
       windowNameAnalyzer?.MemberExpression?.(node, ancestors);
+      originReadAnalyzer?.MemberExpression?.(node, ancestors);
+    },
+    Identifier(node, ancestors) {
+      debugFlagsAnalyzer?.Identifier?.(node, ancestors);
     },
     VariableDeclarator(node, ancestors) {
       documentDomainAnalyzer?.VariableDeclarator?.(node, ancestors);
+      sensitiveAssignmentAnalyzer?.VariableDeclarator?.(node, ancestors);
+      envFallbackAnalyzer?.VariableDeclarator?.(node, ancestors);
     },
     ObjectExpression(node, ancestors) {
       fetchOptionsAnalyzer?.ObjectExpression?.(node, ancestors);
       dangerousHtmlAnalyzer?.ObjectExpression?.(node, ancestors);
+    },
+    Property(node, ancestors) {
+      configObjectAnalyzer?.Property?.(node, ancestors);
+      authHeaderAnalyzer?.Property?.(node, ancestors);
+      debugFlagsAnalyzer?.Property?.(node, ancestors);
+    },
+    LogicalExpression(node, ancestors) {
+      envFallbackAnalyzer?.LogicalExpression?.(node, ancestors);
     },
     JSXElement(node, ancestors) {
       dangerousHtmlAnalyzer?.JSXElement?.(node, ancestors);
@@ -286,6 +344,10 @@ export function analyzeFile(
       dependencyConfusionAnalyzer?.ImportDeclaration?.(node, ancestors);
     },
   });
+
+  for (const match of results) {
+    match.tags[`file-category-${fileCategory}`] = true;
+  }
 
   return results;
 }

@@ -59,10 +59,20 @@ func normalizeLabel(s string) string {
 }
 
 func matchToTreeNode(match AnalyzerMatch) ASTAnalyzerTreeNode {
+	tooltip := ""
+	if confidence, ok := match.Extra["confidence"].(string); ok && confidence != "" {
+		var b strings.Builder
+		fmt.Fprintf(&b, "confidence: %s", confidence)
+		if entropy, ok := match.Extra["entropy"].(float64); ok {
+			fmt.Fprintf(&b, " | entropy: %g", entropy)
+		}
+		tooltip = b.String()
+	}
 	return ASTAnalyzerTreeNode{
-		Type:  ASTAnalyzerTreeNodeTypeMatch,
-		Data:  match,
-		Label: normalizeLabel(match.Value),
+		Type:    ASTAnalyzerTreeNodeTypeMatch,
+		Data:    match,
+		Label:   normalizeLabel(match.Value),
+		Tooltip: tooltip,
 	}
 }
 
@@ -433,6 +443,8 @@ var onhashchangeTags = []string{"onhashchange"}
 
 // eval Tags
 var evalTags = []string{"eval", "javascript-injection"}
+var debugFlagTags = []string{"debug-flag"}
+var originReadTags = []string{"origin-read"}
 
 // document.domain Tags
 var documentDomainTags = []string{"domain-assignment", "domain-read", "document-domain-manipulation"}
@@ -489,6 +501,9 @@ var clientBehaviorTags = common.AppendAll(
 	urlSearchParamsTags,
 	locationTags,
 	storageTags,
+	debugFlagTags,
+	originReadTags,
+	windowNameTags,
 )
 
 func buildClientBehaviorTree(matchesByTag map[string][]AnalyzerMatch) ASTAnalyzerTreeNode {
@@ -527,13 +542,14 @@ func buildClientBehaviorTree(matchesByTag map[string][]AnalyzerMatch) ASTAnalyze
 		}
 
 		// postmessage
-		if hasAnyMatches(matchesByTag, postMessageTags) {
+		if hasAnyMatches(matchesByTag, postMessageTags) || hasAnyMatches(matchesByTag, addEventListenerTags) {
 			postmessageNode := createNavigationTreeNode(ASTAnalyzerTreeNode{
 				Label:    "postMessage",
 				IconName: "resources:postmessage",
 			})
 
 			addMatchesToNode(&postmessageNode, matchesByTag, postMessageTags)
+			addMatchesToNode(&postmessageNode, matchesByTag, addEventListenerTags)
 			eventsNode.Children = append(eventsNode.Children, postmessageNode)
 		}
 
@@ -549,6 +565,28 @@ func buildClientBehaviorTree(matchesByTag map[string][]AnalyzerMatch) ASTAnalyze
 		}
 
 		behaviorNode.Children = append(behaviorNode.Children, eventsNode)
+	}
+
+	// Debug Flags (client-side feature/debug switches worth forcing)
+	if hasAnyMatches(matchesByTag, debugFlagTags) {
+		flagsNode := createNavigationTreeNode(ASTAnalyzerTreeNode{
+			Label:    "Debug Flags",
+			IconName: "resources:flag",
+		})
+
+		addMatchesToNode(&flagsNode, matchesByTag, debugFlagTags)
+		behaviorNode.Children = append(behaviorNode.Children, flagsNode)
+	}
+
+	// Origin Reads (event.origin checks — used with postmessage-origin-risk)
+	if hasAnyMatches(matchesByTag, originReadTags) {
+		originNode := createNavigationTreeNode(ASTAnalyzerTreeNode{
+			Label:    "Origin Reads",
+			IconName: "resources:shield",
+		})
+
+		addMatchesToNode(&originNode, matchesByTag, originReadTags)
+		behaviorNode.Children = append(behaviorNode.Children, originNode)
 	}
 
 	if hasAnyMatches(matchesByTag, locationTags) {

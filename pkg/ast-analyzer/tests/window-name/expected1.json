@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name",
     "start": {
@@ -12,11 +12,12 @@
       "column": 31
     },
     "tags": {
-      "window-name-read": true
+      "window-name-read": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name",
     "start": {
@@ -28,11 +29,12 @@
       "column": 23
     },
     "tags": {
-      "window-name-read": true
+      "window-name-read": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name",
     "start": {
@@ -44,11 +46,12 @@
       "column": 28
     },
     "tags": {
-      "window-name-read": true
+      "window-name-read": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name",
     "start": {
@@ -60,11 +63,12 @@
       "column": 22
     },
     "tags": {
-      "window-name-read": true
+      "window-name-read": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name",
     "start": {
@@ -76,11 +80,12 @@
       "column": 26
     },
     "tags": {
-      "window-name-read": true
+      "window-name-read": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name = \"newName\"",
     "start": {
@@ -92,11 +97,12 @@
       "column": 27
     },
     "tags": {
-      "window-name-assignment": true
+      "window-name-assignment": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name = \"testWindow\"",
     "start": {
@@ -108,11 +114,12 @@
       "column": 26
     },
     "tags": {
-      "window-name-assignment": true
+      "window-name-assignment": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/window-name/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "window-name",
     "value": "window.name = newName",
     "start": {
@@ -124,7 +131,8 @@
       "column": 29
     },
     "tags": {
-      "window-name-assignment": true
+      "window-name-assignment": true,
+      "file-category-app": true
     }
   }
 ]

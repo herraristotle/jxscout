@@ -1,5 +1,8 @@
 import { AnalyzerMatch, AnalyzerParams } from "../types";
 import { Visitor } from "../walker";
+import {
+  evaluateSecretCandidate,
+} from "../secret-gates";
 
 // Define the patterns for secrets detection
 
@@ -5751,8 +5754,29 @@ const secretsAnalyzerBuilder = (
         return;
       }
 
+      // Left-only window for proximity gates: identifier always precedes
+      // the value in `name = "value"`, so text after it can only add false
+      // context. Back off past the quote that opens this literal.
+      const leftWindow = args.source.slice(
+        Math.max(0, node.start - 80 > node.loc.start.column ? node.start - 80 : 0),
+        node.start
+      ).replace(/['"`]\s*$/, "");
+
       for (const pattern of SECRET_PATTERNS) {
         if (pattern.regex.test(node.value)) {
+          const eval_result = evaluateSecretCandidate(
+            pattern.name.toLowerCase().replace(/\s+/g, "_"),
+            node.value,
+            leftWindow,
+            args.source.slice(
+              Math.max(0, node.start - 150),
+              Math.min(args.source.length, node.end + 150)
+            )
+          );
+          if (!eval_result.keep) {
+            continue;
+          }
+
           const match: AnalyzerMatch = {
             filePath: args.filePath,
             analyzerName: SECRETS_ANALYZER_NAME,
@@ -5763,6 +5787,10 @@ const secretsAnalyzerBuilder = (
               secret: true,
               [`secret-type-${pattern.name.toLowerCase().replace(/\s+/g, "-")}`]:
                 true,
+            },
+            extra: {
+              confidence: eval_result.confidence,
+              entropy: eval_result.entropy,
             },
           };
 

@@ -1,6 +1,6 @@
 [
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch-options/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch-options",
     "value": "{\n  method: 'GET',\n  credentials: 'include',\n  mode: 'cors'\n}",
     "start": {
@@ -12,11 +12,12 @@
       "column": 1
     },
     "tags": {
-      "fetch-options": true
+      "fetch-options": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch-options/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch-options",
     "value": "{\n  method: 'GET',\n  headers: {\n    'Content-Type': 'application/json'\n  }\n}",
     "start": {
@@ -28,11 +29,12 @@
       "column": 1
     },
     "tags": {
-      "fetch-options": true
+      "fetch-options": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch-options/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch-options",
     "value": "{\n  method: 'POST',\n  headers: {\n    'Authorization': 'Bearer token'\n  },\n  body: JSON.stringify({ data: 'test' })\n}",
     "start": {
@@ -44,11 +46,12 @@
       "column": 1
     },
     "tags": {
-      "fetch-options": true
+      "fetch-options": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch-options/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch-options",
     "value": "{\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({ data: 'test' })\n}",
     "start": {
@@ -60,11 +63,12 @@
       "column": 1
     },
     "tags": {
-      "fetch-options": true
+      "fetch-options": true,
+      "file-category-app": true
     }
   },
   {
-    "filePath": "/Users/francisconeves/projects/jxscout/pkg/ast-analyzer/tests/fetch-options/files/1.js",
+    "filePath": "1.js",
     "analyzerName": "fetch-options",
     "value": "{\n  method: 'PUT'\n}",
     "start": {
@@ -76,7 +80,8 @@
       "column": 1
     },
     "tags": {
-      "fetch-options": true
+      "fetch-options": true,
+      "file-category-app": true
     }
   }
 ]

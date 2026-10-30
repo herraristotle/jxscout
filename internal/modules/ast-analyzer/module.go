@@ -268,6 +268,27 @@ func (m *astAnalyzerModule) analyzeAsset(asset asset, force bool) (astAnalysis, 
 		return analysis, errutil.Wrapf(err, "failed to parse ast analyzer output: %s", results)
 	}
 
+	// File-level: flag postMessage activity with no origin check anywhere
+	// in the file (ported from jsrip inspector.py).
+	risk := correlatePostMessageOriginRisk(output)
+	if risk.IsRisk {
+		for i := range output {
+			if output[i].AnalyzerName == "postmessage" || output[i].AnalyzerName == "message-listener" {
+				if output[i].Tags == nil {
+					output[i].Tags = map[string]bool{}
+				}
+				output[i].Tags["postmessage-origin-risk"] = true
+			}
+		}
+
+		// Re-serialize so the stored results carry the flags.
+		flaggedJSON, err := json.Marshal(output)
+		if err != nil {
+			return analysis, errutil.Wrap(err, "failed to re-serialize flagged ast analysis results")
+		}
+		results = string(flaggedJSON)
+	}
+
 	analysis = astAnalysis{
 		AssetID:         asset.ID,
 		AnalyzerVersion: analyzerVersion,

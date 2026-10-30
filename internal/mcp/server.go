@@ -266,10 +266,17 @@ func (s *Server) handlePromptsGet(params json.RawMessage) (interface{}, error) {
 
 1. Call jxscout_get_descriptors with project=%q url=%q.
 2. Call jxscout_get_asset for the same asset to see its saved path and headers.
-3. Group descriptors by analyzer. For each group, say whether the match is
-   reachable from attacker-controlled input and what it would take to exploit.
-4. Rank the groups by severity and name the single best candidate to investigate
-   first. Do not invent data that is not in the tool output.`, url, project, project, url)
+3. Group descriptors by analyzer. Skip matches tagged file-category-vendor
+   unless nothing else qualifies — vendor tags mean bundled third-party code
+   (jQuery, Angular, webpack runtime), not first-party logic.
+4. Secret matches carry extra.confidence (high|medium|low|info) and
+   extra.entropy. Report high-confidence secrets first; mention low/info
+   ones only if nothing stronger exists. postmessage-origin-risk tags mark
+   files that post/listen for messages with no event.origin check anywhere.
+5. For each group, say whether the match is reachable from attacker-controlled
+   input and what it would take to exploit.
+6. Rank the groups by severity and name the single best candidate to
+   investigate first. Do not invent data that is not in the tool output.`, url, project, project, url)
 
 	return map[string]interface{}{
 		"description": fmt.Sprintf("Triage asset %s", url),
@@ -480,6 +487,25 @@ func (s *Server) handleToolsList(ctx context.Context, params json.RawMessage) (i
 					"required": []string{"project"},
 				},
 			},
+			{
+				"name":        "jxscout_list_secrets",
+				"description": "List secret findings for a project, sorted by confidence tier (high first). Start with min_confidence=high and widen only if needed.",
+				"inputSchema": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"project": map[string]string{
+							"type":        "string",
+							"description": "Project name",
+						},
+						"min_confidence": map[string]interface{}{
+							"type":        "string",
+							"description": "Minimum confidence tier (high|medium|low|info). Empty = all.",
+							"enum":        []string{"high", "medium", "low", "info"},
+						},
+					},
+					"required": []string{"project"},
+				},
+			},
 		},
 	}, nil
 }
@@ -505,6 +531,8 @@ func (s *Server) handleToolsCall(ctx context.Context, params json.RawMessage) (i
 		return s.getDescriptors(ctx, call.Arguments)
 	case "jxscout_generate_wordlist":
 		return s.generateWordlist(ctx, call.Arguments)
+	case "jxscout_list_secrets":
+		return s.listSecrets(ctx, call.Arguments)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", call.Name)
 	}
