@@ -4,6 +4,31 @@ import { Visitor } from "../walker";
 
 export const FETCH_ANALYZER_NAME = "fetch";
 
+// Auth header patterns to detect authenticated endpoints
+const AUTH_PATTERNS = [
+  /authorization/i,
+  /bearer/i,
+  /cookie/i,
+  /x-auth/i,
+  /x-api-key/i,
+  /api-key/i,
+  /token/i,
+  /jwt/i,
+  /session/i,
+  /csrf/i,
+  /x-csrf/i,
+];
+
+// Check if auth-related strings appear within ±80 chars of the fetch call
+function checkAuthContext(source: string, fetchStart: number, fetchEnd: number): boolean {
+  const windowSize = 80;
+  const contextStart = Math.max(0, fetchStart - windowSize);
+  const contextEnd = Math.min(source.length, fetchEnd + windowSize);
+  const context = source.slice(contextStart, contextEnd);
+
+  return AUTH_PATTERNS.some(pattern => pattern.test(context));
+}
+
 const fetchAnalyzerBuilder = (
   args: AnalyzerParams,
   matchesReturn: AnalyzerMatch[]
@@ -20,6 +45,8 @@ const fetchAnalyzerBuilder = (
         node.callee.name === "fetch" &&
         node.arguments.length >= 1
       ) {
+        const likelyAuthed = checkAuthContext(args.source, node.start, node.end);
+
         const match: AnalyzerMatch = {
           filePath: args.filePath,
           analyzerName: FETCH_ANALYZER_NAME,
@@ -28,6 +55,7 @@ const fetchAnalyzerBuilder = (
           end: node.loc.end,
           tags: {
             "fetch-call": true,
+            ...(likelyAuthed && { "likely-authed": true }),
           },
         };
 
