@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	"github.com/francisconeves97/jxscout/internal/settings"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/settings"
 )
 
 // Pro v2 http_request_ingestion: saves raw HTTP traffic as plain files under

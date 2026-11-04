@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
-	"github.com/francisconeves97/jxscout/pkg/constants"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
+	"github.com/herraristotle/jxscout/pkg/constants"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"

@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/francisconeves97/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/core/common"
 )
 
 //go:embed skills/*/SKILL.md

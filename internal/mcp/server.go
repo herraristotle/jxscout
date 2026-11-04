@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
-	"github.com/francisconeves97/jxscout/internal/core/common"
+	assetservice "github.com/herraristotle/jxscout/internal/core/asset-service"
+	"github.com/herraristotle/jxscout/internal/core/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )

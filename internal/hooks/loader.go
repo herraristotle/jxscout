@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/francisconeves97/jxscout/internal/settings"
+	"github.com/herraristotle/jxscout/internal/settings"
 )
 
 // LoadHooks extracts the v2 hooks configuration from the merged project settings

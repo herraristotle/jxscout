@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/francisconeves97/jxscout/pkg/constants"
+	"github.com/herraristotle/jxscout/pkg/constants"
 	"github.com/spf13/cobra"
 )
 

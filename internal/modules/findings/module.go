@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/francisconeves97/jxscout/internal/core/findings"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	"github.com/herraristotle/jxscout/internal/core/findings"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 	"github.com/go-chi/chi"
 )
 

@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	"github.com/francisconeves97/jxscout/internal/core/dbeventbus"
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
-	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/core/dbeventbus"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
+	assetservice "github.com/herraristotle/jxscout/internal/core/asset-service"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 )
 
 //go:embed custom_analyzer.js

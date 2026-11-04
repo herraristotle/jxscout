@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
-	jxwebsocket "github.com/francisconeves97/jxscout/internal/core/websocket"
-	"github.com/francisconeves97/jxscout/internal/modules/beautifier"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
+	jxwebsocket "github.com/herraristotle/jxscout/internal/core/websocket"
+	"github.com/herraristotle/jxscout/internal/modules/beautifier"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 	"github.com/gorilla/websocket"
 )
 

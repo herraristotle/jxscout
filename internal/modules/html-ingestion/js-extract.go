@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
 
 	"github.com/PuerkitoBio/goquery"
 )

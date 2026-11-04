@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
 )
 
 type Capturer struct {

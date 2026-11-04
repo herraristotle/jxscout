@@ -1,7 +1,7 @@
 package jxscout
 
 import (
-	"github.com/francisconeves97/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/core/common"
 )
 
 func (s *jxscout) startMemoryMonitoring() {

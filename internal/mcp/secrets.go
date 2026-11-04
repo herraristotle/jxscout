@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/francisconeves97/jxscout/internal/core/findings"
+	"github.com/herraristotle/jxscout/internal/core/findings"
 	"github.com/jmoiron/sqlx"
 )
 

@@ -15,7 +15,7 @@ import (
 
 	"go.uber.org/ratelimit"
 
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
 )
 
 // blockedFetchRanges are refused on connect. Link-local covers the cloud

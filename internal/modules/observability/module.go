@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/francisconeves97/jxscout/pkg/constants"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	"github.com/herraristotle/jxscout/pkg/constants"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 )
 
 // Module exposes liveness and process metrics for operators and container

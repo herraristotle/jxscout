@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
 )
 
 type gitService struct {

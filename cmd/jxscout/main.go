@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/francisconeves97/jxscout/internal/cli"
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	"github.com/francisconeves97/jxscout/internal/mcp"
-	"github.com/francisconeves97/jxscout/internal/settings"
-	"github.com/francisconeves97/jxscout/pkg/constants"
-	"github.com/francisconeves97/jxscout/pkg/jxscout"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	"github.com/herraristotle/jxscout/internal/cli"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/mcp"
+	"github.com/herraristotle/jxscout/internal/settings"
+	"github.com/herraristotle/jxscout/pkg/constants"
+	"github.com/herraristotle/jxscout/pkg/jxscout"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 
 	"github.com/projectdiscovery/goflags"
 )

@@ -14,8 +14,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
-	"github.com/francisconeves97/jxscout/pkg/constants"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
+	"github.com/herraristotle/jxscout/pkg/constants"
 )
 
 func StrPtr(s *string) string {

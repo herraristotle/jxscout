@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 	"github.com/phsym/console-slog"
 	slogmulti "github.com/samber/slog-multi"
 	"gopkg.in/natefinch/lumberjack.v2"

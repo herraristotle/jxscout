@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/francisconeves97/jxscout/internal/core/database"
+	"github.com/herraristotle/jxscout/internal/core/database"
 	tea "github.com/charmbracelet/bubbletea"
 )
 

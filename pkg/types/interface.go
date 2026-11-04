@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	assetfetcher "github.com/francisconeves97/jxscout/internal/core/asset-fetcher"
-	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
-	dbeventbus "github.com/francisconeves97/jxscout/internal/core/dbeventbus"
-	"github.com/francisconeves97/jxscout/internal/core/eventbus"
-	"github.com/francisconeves97/jxscout/internal/core/websocket"
+	assetfetcher "github.com/herraristotle/jxscout/internal/core/asset-fetcher"
+	assetservice "github.com/herraristotle/jxscout/internal/core/asset-service"
+	dbeventbus "github.com/herraristotle/jxscout/internal/core/dbeventbus"
+	"github.com/herraristotle/jxscout/internal/core/eventbus"
+	"github.com/herraristotle/jxscout/internal/core/websocket"
 
 	"github.com/go-chi/chi"
 	"github.com/jmoiron/sqlx"

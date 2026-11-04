@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 )
 
 // MonitoringModule runs scheduled monitors with Discord notifications (Pro v2 monitoring mode).

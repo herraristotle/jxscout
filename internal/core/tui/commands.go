@@ -14,11 +14,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	"github.com/francisconeves97/jxscout/internal/modules/overrides"
-	"github.com/francisconeves97/jxscout/pkg/constants"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	assetservice "github.com/herraristotle/jxscout/internal/core/asset-service"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/modules/overrides"
+	"github.com/herraristotle/jxscout/pkg/constants"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/pkg/browser"
 	"gopkg.in/yaml.v3"
@@ -41,8 +41,8 @@ const GuideContent = `
    though your proxy plugin will filter requests in scope by default.
 
 3. Install the jxscout plugin for your proxy:
-   - Burp: https://github.com/francisconeves97/jxscout-burp
-   - Caido: https://github.com/francisconeves97/jxscout-caido
+   - Burp: https://github.com/herraristotle/jxscout-burp
+   - Caido: https://github.com/herraristotle/jxscout-caido
 
 4. That's it! Visit your target website and watch as HTML and JS files
    magically appear in your target's folder.
@@ -1163,7 +1163,7 @@ func (t *TUI) RegisterDefaultCommands() {
 				// Compare versions
 				if latestVersion != currentVersion {
 					t.writeLineToOutput(fmt.Sprintf("🔄 A new version is available: %s", latestVersion))
-					t.writeLineToOutput("Visit https://github.com/francisconeves97/jxscout to download the latest version.")
+					t.writeLineToOutput("Visit https://github.com/herraristotle/jxscout to download the latest version.")
 				} else {
 					t.writeLineToOutput("✅ You are running the latest version.")
 				}

@@ -11,9 +11,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 	"github.com/go-chi/chi"
 )
 

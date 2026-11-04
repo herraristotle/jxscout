@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	assetservice "github.com/francisconeves97/jxscout/internal/core/asset-service"
-	"github.com/francisconeves97/jxscout/internal/core/common"
-	"github.com/francisconeves97/jxscout/internal/core/dbeventbus"
-	"github.com/francisconeves97/jxscout/internal/core/errutil"
-	jxscouttypes "github.com/francisconeves97/jxscout/pkg/types"
+	assetservice "github.com/herraristotle/jxscout/internal/core/asset-service"
+	"github.com/herraristotle/jxscout/internal/core/common"
+	"github.com/herraristotle/jxscout/internal/core/dbeventbus"
+	"github.com/herraristotle/jxscout/internal/core/errutil"
+	jxscouttypes "github.com/herraristotle/jxscout/pkg/types"
 	"github.com/pkg/errors"
 )
 
